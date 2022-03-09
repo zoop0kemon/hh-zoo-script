@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name            Zoo's Hentai Heroes Scripts
+// @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.0.1
+// @version         0.1.0
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -16,6 +16,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.1.0: Added League Data Collector
 // 0.0.1: Inital version
 
 (() => {
@@ -192,7 +193,7 @@
                     left: 4px;
                     width: 100%;
                     text-align: center;
-                    font-size: 13px;
+                    font-size: 13px!important;
                 }
             `)
             this.insertRule(`
@@ -813,9 +814,115 @@
         }
     }
 
+    class LeagueDataCollector extends HHModule {
+        constructor () {
+            const baseKey = 'leagueDataCollector'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `League Data Collector`
+            }
+            super({name: baseKey, configSchema})
+        }
+
+        shouldRun () {
+            return currentPage.includes('tower-of-fame')
+        }
+
+        recordData () {
+            let leagueData = {date: new Date(), playerList: []}
+            const leadTable = document.getElementsByClassName("leadTable")[0];
+
+            for (let i=0;i<leadTable.childElementCount;i++) {
+                leagueData.playerList.push({
+                    id: leagues_list[i].id_player,
+                    name: leadTable.children[i].children[1].children[2].textContent,
+                    level: leadTable.children[i].children[2].innerText.trim(),
+                    flag: leadTable.children[i].children[1].children[1].getAttribute("hh_title"),
+                    points: leadTable.children[i].children[4].innerText.trim().replace(/,/g, '')
+                })
+            }
+
+            lsSet('LeagueRecord',leagueData)
+        }
+
+        copyData (week) {
+            const leagueData = lsGet(week) || {}
+            let copyText = 'No Data Found';
+            if (week == 'LeagueRecord') { // copy for this week
+                copyText = ''
+                leagueData.playerList.forEach((player) => {
+                    copyText += `${player.id}\t${player.name}\t${player.level}\n`
+                })
+            }
+            if (week == 'OldLeagueRecord' && leagueData != {}) { //copy for last week
+                copyText = `${new Date(leagueData.date).toUTCString()}\n`
+                leagueData.playerList.forEach((player) => {
+                    copyText += `${Object.values(player).join('\t')}\n`
+                })
+            }
+            navigator.clipboard.writeText(copyText)
+        }
+
+        run () {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            $(document).on('league:rollover', () => {
+                lsSet('OldLeagueRecord',lsGet('LeagueRecord'))
+            })
+
+            $(document).ready(() => {
+                this.recordData()
+
+                $(".league_end_in").append(`
+                <div class="record_league">
+                    <span id="last_week">
+                        <img alt="Copy Last Week's League" hh_title="Copy Last Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
+                    </span>
+                </div>
+                <div class="record_league">
+                    <span id="this_week">
+                        <img alt="Copy This Week's League" hh_title="Copy This Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
+                    </span>
+                </div>`)
+
+                $('.record_league >span#last_week').click(() => {
+                    this.copyData('OldLeagueRecord')
+                })
+                $('.record_league >span#this_week').click(() => {
+                    this.copyData('LeagueRecord')
+                })
+
+                sheet.insertRule(`
+                .individualDisplaySwitch {
+                    left: 55px;
+                }`);
+                sheet.insertRule(`
+                .record_league {
+                    position: absolute;
+                    left: 140px;
+                    top: -37px;
+                    cursor: pointer;
+                }`);
+                sheet.insertRule(`
+                .record_league >span#last_week {
+                    opacity: 0.75;
+                }`);
+                sheet.insertRule(`
+                .record_league >span#this_week {
+                    position: inherit;
+                    left: 35px;
+                }`);
+            })
+
+            this.hasRun = true
+        }
+    }
+
     const allModules = [
         new DailyMissionsRestyle(),
-        new GirlDataRecord()
+        new GirlDataRecord(),
+        new LeagueDataCollector()
     ]
 
     setTimeout(() => {
