@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.1.0
+// @version         0.1.1
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -16,6 +16,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.1.1: League Data Collector style and error message fix
 // 0.1.0: Added League Data Collector
 // 0.0.1: Inital version
 
@@ -847,7 +848,7 @@
         }
 
         copyData (week) {
-            const leagueData = lsGet(week) || {}
+            const leagueData = lsGet(week)
             let copyText = 'No Data Found';
             if (week == 'LeagueRecord') { // copy for this week
                 copyText = ''
@@ -855,7 +856,7 @@
                     copyText += `${player.id}\t${player.name}\t${player.level}\n`
                 })
             }
-            if (week == 'OldLeagueRecord' && leagueData != {}) { //copy for last week
+            if (week == 'OldLeagueRecord' && leagueData != null) { //copy for last week
                 copyText = `${new Date(leagueData.date).toUTCString()}\n`
                 leagueData.playerList.forEach((player) => {
                     copyText += `${Object.values(player).join('\t')}\n`
@@ -895,7 +896,7 @@
 
                 sheet.insertRule(`
                 .individualDisplaySwitch {
-                    left: 55px;
+                    left: 55px!important;
                 }`);
                 sheet.insertRule(`
                 .record_league {
