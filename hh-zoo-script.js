@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.1.1
+// @version         0.1.2
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -16,6 +16,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.1.2: fixed copy to clipboard not working on Nutaku, added more info to "Copy This Week's League"
 // 0.1.1: League Data Collector style and error message fix
 // 0.1.0: Added League Data Collector
 // 0.0.1: Inital version
@@ -89,6 +90,40 @@
     }
     function lsRm(key) {
         return localStorage.removeItem(`${LS_CONFIG_NAME}${key}`)
+    }
+
+    function copyText(text) {
+        navigator.clipboard.writeText(text).catch(e => {
+            console.log("c")
+            let textArea = document.createElement("textarea");
+            textArea.style.position = 'fixed';
+            textArea.style.top = 0;
+            textArea.style.left = 0;
+            textArea.style.width = '2em';
+            textArea.style.height = '2em';
+            textArea.style.padding = 0;
+            textArea.style.border = 'none';
+            textArea.style.outline = 'none';
+            textArea.style.boxShadow = 'none';
+            textArea.style.background = 'transparent';
+            setTimeout(function() {
+                textArea.value = text;
+            }, 0);
+            setTimeout(function() {
+                document.body.appendChild(textArea);
+            }, 0);
+            setTimeout(function() {
+                textArea.focus();
+                textArea.select();
+                try{
+                    document.execCommand('copy');
+                }catch(err){
+                    console.log('Unable to copy');
+                    console.log(text);
+                }
+                document.body.removeChild(textArea);
+            }, 0);
+        })
     }
 
     class STModule {
@@ -553,20 +588,20 @@
 
                 //copy all girls
                 $('.data-grid.data-buttons > li>div').eq(0).click(() => {
-                    let copyText = ''
+                    let text = ''
                     girlIDs.forEach(element => {
-                        copyText += this.printGirl(element, girlData[element])
+                        text += this.printGirl(element, girlData[element])
                     })
-                    navigator.clipboard.writeText(copyText)
+                    CopyText(text)
                 })
 
                 //copy new girls
                 $('.data-grid.data-buttons > li>div').eq(1).click(() => {
-                    let copyText = ''
+                    let text = ''
                     newGirls.forEach(element => {
-                        copyText += this.printGirl(element, girlData[element])
+                        text += this.printGirl(element, girlData[element])
                     })
-                    navigator.clipboard.writeText(copyText)
+                    copyText(text)
                 })
 
                 //clear new girls
@@ -587,29 +622,29 @@
                 //copy each girl
                 $('.data-grid.new-girls li').each(function (index) {
                     $(this).click(() => {
-                        let copyText = ''
+                        let text = ''
                         const girl = girlData[newGirls[index]]
                         for (const [key, value] of Object.entries(girl)) {
                             if (desc || key!='desc') {
-                                copyText += `${value}${key != 'ref_id' ? '\t' : '\n'}`;
+                                text += `${value}${key != 'ref_id' ? '\t' : '\n'}`;
                                 if (key == 'name') {
-                                    copyText += `${newGirls[index]}\t`
+                                    text += `${newGirls[index]}\t`
                                 }
                             }
                         }
-                        navigator.clipboard.writeText(copyText)
+                        copyText(text)
                     })
                 })
 
                 //copy all changes
                 $('.data-grid.changes-buttons > li>div').eq(0).click(() => {
-                    let copyText = ''
+                    let text = ''
                     for (let i=0;i<dataChanges.length;i++) {
                         const change = dataChanges[i]
                         let date = new Date(change.date)
-                        copyText += `${girlsDataList[change.id].name}\t${this.fields[change.field]}\t${change.old}\t${change.new}\t${date.getUTCMonth()+1}/${date.getUTCDate()}/${date.getUTCFullYear()}\n`
+                        text += `${girlsDataList[change.id].name}\t${this.fields[change.field]}\t${change.old}\t${change.new}\t${date.getUTCMonth()+1}/${date.getUTCDate()}/${date.getUTCFullYear()}\n`
                     }
-                    navigator.clipboard.writeText(copyText)
+                    copyText(text)
                 })
 
                 //clear all changes
@@ -849,20 +884,20 @@
 
         copyData (week) {
             const leagueData = lsGet(week)
-            let copyText = 'No Data Found';
+            let text = 'No Data Found';
             if (week == 'LeagueRecord') { // copy for this week
-                copyText = ''
+                text = `${new Date(leagueData.date).toUTCString()}\n`
                 leagueData.playerList.forEach((player) => {
-                    copyText += `${player.id}\t${player.name}\t${player.level}\n`
+                    text += `${Object.values(player).join('\t')}\n`
                 })
             }
             if (week == 'OldLeagueRecord' && leagueData != null) { //copy for last week
-                copyText = `${new Date(leagueData.date).toUTCString()}\n`
+                text = `${new Date(leagueData.date).toUTCString()}\n`
                 leagueData.playerList.forEach((player) => {
-                    copyText += `${Object.values(player).join('\t')}\n`
+                    text += `${Object.values(player).join('\t')}\n`
                 })
             }
-            navigator.clipboard.writeText(copyText)
+            copyText(text)
         }
 
         run () {
