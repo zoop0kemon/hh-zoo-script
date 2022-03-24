@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.1.2
+// @version         0.1.3
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -16,6 +16,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.1.3: sorted league data
 // 0.1.2: fixed copy to clipboard not working on Nutaku, added more info to "Copy This Week's League"
 // 0.1.1: League Data Collector style and error message fix
 // 0.1.0: Added League Data Collector
@@ -878,6 +879,9 @@
                     points: leadTable.children[i].children[4].innerText.trim().replace(/,/g, '')
                 })
             }
+
+            // make sure data is sorted
+            leagueData.playerList.sort((a, b) => (parseInt(b.points) > parseInt(a.points)) ? 1 : 0);
 
             lsSet('LeagueRecord',leagueData)
         }
