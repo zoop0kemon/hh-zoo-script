@@ -881,7 +881,7 @@
             }
 
             // make sure data is sorted
-            leagueData.playerList.sort((a, b) => (parseInt(b.points) > parseInt(a.points)) ? 1 : 0);
+            leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1);
 
             lsSet('LeagueRecord',leagueData)
         }
