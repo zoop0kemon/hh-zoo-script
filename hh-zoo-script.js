@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.2.0
+// @version         0.2.1
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -16,6 +16,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.2.1: Fixed some Improved Waifu bugs
 // 0.2.0: Added Improved Waifu
 // 0.1.3: sorted league data
 // 0.1.2: fixed copy to clipboard not working on Nutaku, added more info to "Copy This Week's League"
@@ -99,7 +100,6 @@
 
     function copyText(text) {
         navigator.clipboard.writeText(text).catch(e => {
-            console.log("c")
             let textArea = document.createElement("textarea");
             textArea.style.position = 'fixed';
             textArea.style.top = 0;
@@ -1023,8 +1023,8 @@
                     }
                     if (waifuInfo.game_girl_id && game_girl_id != waifuInfo.game_girl_id) {
                         girl_id = game_girl_id
-                        waifuInfo.game_girl_id = game_girl_id
                     }
+                    waifuInfo.game_girl_id = game_girl_id
                     waifuInfo.girl_id = girl_id
                     lsSet('WaifuInfo', waifuInfo)
                     const girlDict = HHPlusPlus.Helpers.getGirlDictionary()
@@ -1034,7 +1034,7 @@
                     if (!girlInfo) {console.log("Missing unlocked grade info"); return}
                     let unlocked_grade = girlInfo.unlocked
                     let max_grade = dictGirl.grade || unlocked_grade
-                    let selected_grade = girlInfo.grade || Math.min(waifu.selected_grade, max_grade, unlocked_grade)
+                    let selected_grade = girlInfo.grade === undefined ? Math.min(waifu.selected_grade, max_grade, unlocked_grade) : girlInfo.grade
                     let fav = girlInfo.fav || false
 
                     // replace animated girl
@@ -1264,7 +1264,7 @@
                         if (!girlInfo) {console.log("Missing unlocked grade info"); return}
                         unlocked_grade = girlInfo.unlocked
                         max_grade = dictGirl.grade || unlocked_grade
-                        selected_grade = girlInfo.grade || Math.min(waifu.selected_grade, max_grade, unlocked_grade)
+                        selected_grade = girlInfo.grade === undefined ? Math.min(waifu.selected_grade, max_grade, unlocked_grade) : girlInfo.grade
                         fav = girlInfo.fav || false
                         start = {x:0, y:0}
                         try {scale = girlInfo.pose[selected_grade].scale || 1} catch {scale = 1}
