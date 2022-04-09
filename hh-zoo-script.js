@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.2.1
+// @version         0.2.2
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -16,6 +16,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.2.2: Improved individual waifu selection
 // 0.2.1: Fixed some Improved Waifu bugs
 // 0.2.0: Added Improved Waifu
 // 0.1.3: sorted league data
@@ -350,7 +351,7 @@
             const configSchema = {
                 baseKey,
                 default: false,
-                label: `${gameConfig.Girl} Data Record`,
+                label: `${gameConfig.Girl} Data Record (WARNING: Local Storage Intensive)`,
                 subSettings: [{
                     key: 'desc',
                     label: `Record ${gameConfig.Girl} Description`,
@@ -905,7 +906,7 @@
                                 row += `${id != Hero.infos.id ? '' : simHist['me'][i]}\t`
                             }
                         }
-                        row += id != Hero.infos.id ? simHist[id].hitTime ? simHist[id].hitTime[0] : '' : 'NA'
+                        row += id != Hero.infos.id ? simHist[id].hitTime ? Math.min.apply(null,simHist[id].hitTime) : '' : 'NA'
                     }
 
                     if (extra && (player.id == Hero.infos.id)) {
@@ -980,7 +981,7 @@
             const configSchema = {
                 baseKey,
                 default: true,
-                label: `Improved ${gameConfig.waifu}`
+                label: `Improved ${gameConfig.waifu} (Visit Harem Page first)`
             }
             super({name: baseKey, configSchema})
         }
@@ -1008,7 +1009,6 @@
                     let cycle = waifuInfo.cycle || false
                     let mode = waifuInfo.mode || 'All'
                     let ids = this.getIds(waifuInfo, mode)
-                    const game_girl_id = waifu.id_girl.toString()
                     let girl_id = waifuInfo.girl_id || game_girl_id;
                     if (cycle) {
                         let temp_id = girl_id
@@ -1021,10 +1021,10 @@
                         }
                         girl_id = temp_id
                     }
-                    if (waifuInfo.game_girl_id && game_girl_id != waifuInfo.game_girl_id) {
-                        girl_id = game_girl_id
+                    if (waifuInfo.individual) {
+                        girl_id = waifu.id_girl.toString()
+                        waifuInfo.individual = false
                     }
-                    waifuInfo.game_girl_id = game_girl_id
                     waifuInfo.girl_id = girl_id
                     lsSet('WaifuInfo', waifuInfo)
                     const girlDict = HHPlusPlus.Helpers.getGirlDictionary()
@@ -1060,7 +1060,7 @@
                     let waifu_buttons = $('.waifu-buttons-container').eq(0)
 
                     // pose switch
-                    let gradeSwitch = `<div class="diamond-bar"><div class="girl-name"><a href="/waifu.html">${dictGirl.name}</a></div>`
+                    let gradeSwitch = `<div class="diamond-bar"><div class="girl-name"><span>${dictGirl.name}</span><a href="/waifu.html"><img src="https://${cdnHost}/design/menu/edit.svg"></a></div>`
                     for (let i=0;i<7;i++) {
                         gradeSwitch += `<div class="diamond${i==selected_grade? ' selected': ''} ${i<=unlocked_grade ? 'un' : ''}locked${i>max_grade? ' hide' : ''}"></div>`
                     }
@@ -1181,6 +1181,7 @@
                         } else {
                             scale = Math.max(scale-0.05, 0.1);
                         }
+                        // translation needs improvment
                         cord = {x: cord.x-(scale/old_scale-1)*(point.x-size.width*old_scale),
                                 y: cord.y-(scale/old_scale-1)*(point.y-size.height*old_scale)}
                         setTransform();
@@ -1264,7 +1265,7 @@
                         if (!girlInfo) {console.log("Missing unlocked grade info"); return}
                         unlocked_grade = girlInfo.unlocked
                         max_grade = dictGirl.grade || unlocked_grade
-                        selected_grade = girlInfo.grade === undefined ? Math.min(waifu.selected_grade, max_grade, unlocked_grade) : girlInfo.grade
+                        selected_grade = girlInfo.grade === undefined ? Math.min(max_grade, unlocked_grade) : girlInfo.grade
                         fav = girlInfo.fav || false
                         start = {x:0, y:0}
                         try {scale = girlInfo.pose[selected_grade].scale || 1} catch {scale = 1}
@@ -1274,7 +1275,7 @@
 
                         waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
                         setTransform();
-                        $('.girl-name a').eq(0).text(dictGirl.name)
+                        $('.girl-name span').eq(0).text(dictGirl.name)
                         $('.diamond').each(function (index) {
                             index == selected_grade ? $(this).addClass('selected') : $(this).removeClass('selected')
                             if (index <= unlocked_grade) {
@@ -1329,15 +1330,18 @@
                     sheet.insertRule(`
                     .waifu-buttons-container .girl-name {
                         position: absolute;
-                        bottom: 28px;
+                        bottom: 26px;
                         line-height: 18px;
                         text-align: center;
                         text-shadow: 2px 2px 5px black;
                     }`);
                     sheet.insertRule(`
-                    .girl-name a {
-                        color: white;
-                        text-decoration: none;
+                    .girl-name img {
+                        width: 16px;
+                        height: 16px;
+                        margin-left: 5px;
+                        margin-bottom: 2px;
+                        filter: drop-shadow(2px 2px 3px black);
                     }`);
                     sheet.insertRule(`
                     .waifu-buttons-container .round_blue_button {
@@ -1386,6 +1390,14 @@
                             fav? waifuInfo.girls[id].fav = true : delete waifuInfo.girls[id].fav
                             lsSet('WaifuInfo', waifuInfo)
                         })
+                    })
+
+                    HHPlusPlus.Helpers.onAjaxResponse(/action=waifu_select/i, (response, opt) => {
+                        const searchParams = new URLSearchParams(opt.data)
+                        const id_girl = searchParams.get('id_girl')
+
+                        waifuInfo.individual = true
+                        lsSet('WaifuInfo', waifuInfo)
                     })
 
                     sheet.insertRule(`
