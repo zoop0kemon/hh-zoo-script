@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.2.2
+// @version         0.2.3
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -16,6 +16,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.2.3: Fixed some styling due to update
 // 0.2.2: Improved individual waifu selection
 // 0.2.1: Fixed some Improved Waifu bugs
 // 0.2.0: Added Improved Waifu
@@ -193,7 +194,7 @@
                 #missions>div .missions_wrap {
                     display: grid;
                     grid-template-columns: 1fr 1fr 1fr;
-                    grid-gap: 5px;
+                    grid-gap: 4px;
                     align-content: start;
                 }
             `)
@@ -1042,7 +1043,7 @@
                     if (waifu_animated.length > 0) {
                         waifu_animated.eq(0).replaceWith(`<img src="https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png" class="avatar ">`)
                     }
-                    // if hidden, put girl and set up better hide button
+                    // if hidden, put girl and re setup hide button
                     let display = waifuInfo.display || waifu.display
                     let $eye = $(".eye")
                     if (waifu.display == 0) {
@@ -1051,9 +1052,24 @@
                             $eye[0].children[0].src = `https://${cdnHost}/quest/ic_eyeclosed.svg`
                         }
                     }
-                    let waifu_image = $('.waifu-container>img').eq(0)
-                    if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
-                        waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
+
+                    let waifu_image
+                    if ($('.waifu-container>img').length) {
+                        waifu_image = $('.waifu-container>img').eq(0)
+                        if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
+                            waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
+                        }
+                    } else {
+                        const observer = new MutationObserver(() => {
+                            if ($('.waifu-container>img').length) {
+                                waifu_image = $('.waifu-container>img').eq(0)
+                                if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
+                                    waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
+                                }
+                                observer.disconnect()
+                            }
+                        })
+                        observer.observe($('#contains_all > section')[0], {childList: true})
                     }
 
                     $('.waifu-buttons-container a').remove()
@@ -1310,6 +1326,7 @@
                     sheet.insertRule(`
                     .waifu-container {
                         z-index: 1;
+                        margin-top: 0px;
                     }`)
                     sheet.insertRule(`
                     .waifu-buttons-container {
