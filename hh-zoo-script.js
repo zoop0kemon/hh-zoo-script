@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.2.3
+// @version         0.3.0
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -16,6 +16,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.0: Added early pachinko log, UI will be added soon
 // 0.2.3: Fixed some styling due to update
 // 0.2.2: Improved individual waifu selection
 // 0.2.1: Fixed some Improved Waifu bugs
@@ -62,19 +63,76 @@
             girl: 'girl',
             Girl: 'Girl',
             career: 'Career',
-            waifu: 'Waifu'
+            waifu: 'Waifu',
+            pachinko: 'Pachinko',
+            books: {
+                XP1: 'Magazine',
+                XP2: 'Book',
+                XP3: 'Encyclopedia',
+                XP4: 'Spell Book'
+            },
+            gifts: {
+                K1: 'Flowers',
+                K2: 'Chocolates',
+                K3: 'Bracelet',
+                K4: 'Lingerie'
+            },
+            boosters: {
+                B1: 'Ginseng Root',
+                B2: 'Jujbues',
+                B3: 'Chlorella',
+                B4: 'Cordyceps'
+            }
         },
         GH: {
             girl: 'guy',
             Girl: 'Guy',
             career: 'Career',
-            waifu: 'Boyfriend'
+            waifu: 'Boyfriend',
+            pachinko: 'Pachinko',
+            books: {
+                XP1: 'Magazine',
+                XP2: 'Book',
+                XP3: 'Encyclopedia',
+                XP4: 'Spell Book'
+            },
+            gifts: {
+                K1: 'Lollipop',
+                K2: 'Chocolates',
+                K3: 'Bracelet',
+                K4: 'Underpants'
+            },
+            boosters: {
+                B1: 'Ginseng Root',
+                B2: 'Jujbues',
+                B3: 'Chlorella',
+                B4: 'Cordyceps'
+            }
         },
         CxH: {
             girl: 'girl',
             Girl: 'Girl',
             career: 'Super Power',
-            waifu: 'Waifu'
+            waifu: 'Waifu',
+            pachinko: 'Night-club',
+            books: {
+                XP1: 'Audio lesson',
+                XP2: 'Personal dev book',
+                XP3: 'Sport session',
+                XP4: 'Super Kamasutra'
+            },
+            gifts: {
+                K1: 'Jewels for Costume',
+                K2: 'Seamless Super Lingerie',
+                K3: 'Super Flowers',
+                K4: 'Super Gadget'
+            },
+            boosters: {
+                B1: 'Minute Man\'s potion',
+                B2: 'Slow-mo Force sample',
+                B3: 'Sly Mans Anti-sleep pills',
+                B4: 'Super Juice injector'
+            }
         }
     }
     const gameConfig = isGH ? gameConfigs.GH : isCxH ? gameConfigs.CxH : gameConfigs.HH
@@ -1053,23 +1111,9 @@
                         }
                     }
 
-                    let waifu_image
-                    if ($('.waifu-container>img').length) {
-                        waifu_image = $('.waifu-container>img').eq(0)
-                        if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
-                            waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
-                        }
-                    } else {
-                        const observer = new MutationObserver(() => {
-                            if ($('.waifu-container>img').length) {
-                                waifu_image = $('.waifu-container>img').eq(0)
-                                if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
-                                    waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
-                                }
-                                observer.disconnect()
-                            }
-                        })
-                        observer.observe($('#contains_all > section')[0], {childList: true})
+                    let waifu_image = $('.waifu-container>img').eq(0)
+                    if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
+                        waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
                     }
 
                     $('.waifu-buttons-container a').remove()
@@ -1447,11 +1491,130 @@
         }
     }
 
+    class PachinkoLog extends HHModule {
+        constructor () {
+            const baseKey = 'PachinkoLog'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `${gameConfig.pachinko} Log`
+            }
+            super({name: baseKey, configSchema})
+        }
+
+        shouldRun () {
+            return currentPage.includes('pachinko')
+        }
+
+        attachButton () {
+            $('.record_pachinko').eq(0).click(() => {
+                const type = $('.playing-zone').eq(0).attr('type-panel')+'1'
+                const pachinko_log = lsGet('PachinkoLog') || {}
+                const log = pachinko_log[type] || []
+                console.log(type)
+            })
+        }
+
+        run () {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            const reward_keys = {
+                type: {
+                    X: "books",
+                    K: "gifts",
+                    B: "boosters",
+                    E: "equips",
+                    g: "gems",
+                    G: "girls"
+                },
+                rarity: {
+                    C: "Common",
+                    R: "Rare",
+                    E: "Epic",
+                    L: "Legendary",
+                    M: "Mythic"
+                },
+                gems: {
+                    GDo: "Dominatrix",
+                    GSu: "Submissive",
+                    GVo: "Voyeur",
+                    GEc: "Eccentric",
+                    GEx: "Exhibitionist",
+                    GPh: "Physical",
+                    GPl: "Playful",
+                    GSe: "Sensual"
+                }
+            }
+
+            HHPlusPlus.Helpers.defer(() => {
+                /*let $copylog = $(`<div class="record_pachinko"><img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://hh.hh-content.com/design/ic_books_gray.svg"></div>`)
+                $('.playing-zone .container').append($copylog)
+
+                this.attachButton()
+                new MutationObserver(() => this.attachButton()).observe($('.playing-zone')[0], {attributes: true})
+
+                sheet.insertRule(`
+                .record_pachinko {
+                    position: absolute;
+                    right: 8px;
+                    top: 40px;
+                    cursor: pointer;
+                    z-index: 50;
+                 }`);*/
+
+                HHPlusPlus.Helpers.onAjaxResponse(/class=Pachinko&action=play/i, (response, opt) => {
+                    const searchParams = new URLSearchParams(opt.data)
+                    const pachinko = pachinkoDef.find(o => o.id == searchParams.get('what').slice(-1))
+                    const type = pachinko.type
+                    const games = searchParams.get('how_many')
+                    const no_girls = pachinko.content.rewards.girl_shards? false : true
+                    const rewards = response.rewards.data
+                    const plist = `${type}${games}${(no_girls && !(type == 'great' && games == 1))? 'ng': ''}`
+                    let pachinko_log = lsGet('PachinkoLog') || {}
+                    if(!pachinko_log[plist]) {pachinko_log[plist] = [];}
+                    let roll = [new Date().getTime()]
+                    if (type == 'great') {roll.push(Hero.infos.level)}
+
+                    if (rewards.shards) {
+                        rewards.shards.forEach((shards) => {
+                            roll.push('g'+shards.id_girl)
+                        })
+                    }
+                    rewards.rewards.forEach((reward) => {
+                        if (reward.type.includes('item') || reward.type == 'armor') {
+                            const items = $(reward.value.replace(/^\n/,''))
+                            const item = items.find('img:not(.stats_icon)')[0].src.match(/items\/(.+)\.png/)[1]
+                            const rarity = items.attr('rarity')[0].toUpperCase()
+
+                            if (reward.type.includes('item')) {
+                                const count = Math.max(1,items.find('.value_reward')[0].innerText)
+                                for (let i=0;i<count;i++) {
+                                    roll.push(item+rarity)
+                                }
+                            } else {
+                                roll.push(item+rarity+JSON.parse(items.attr('data-d')).name_add)
+                            }
+                        } else if (reward.type == 'gems'){
+                            const gem = $(reward.value).attr('generic-tooltip').substring(0,2)
+                            roll.push('G'+gem)
+                        }
+                    })
+
+                    pachinko_log[plist].push(roll.join(','))
+                    lsSet('PachinkoLog',pachinko_log)
+                })
+            })
+
+            this.hasRun = true
+        }
+    }
+
     const allModules = [
         new DailyMissionsRestyle(),
         new GirlDataRecord(),
         new LeagueDataCollector(),
-        new ImprovedWaifu()
+        new ImprovedWaifu(),
+        new PachinkoLog()
     ]
 
     setTimeout(() => {
