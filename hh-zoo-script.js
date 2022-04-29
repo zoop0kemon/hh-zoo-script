@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.0
+// @version         0.3.1
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
 // @match           https://*.comixharem.com/*
+// @match           https://*.hornyheroes.com/*
 // @run-at          document-body
 // @updateURL       https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
 // @downloadURL     https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
@@ -16,6 +17,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.1: Bug fixes and support for PsH
 // 0.3.0: Added early pachinko log, UI will be added soon
 // 0.2.3: Fixed some styling due to update
 // 0.2.2: Improved individual waifu selection
@@ -46,7 +48,14 @@
         'www.comixharem.com',
         'nutaku.comixharem.com'
     ].includes(location.host)
-    const isHH = !(isGH || isCxH)
+    const isHoH = [
+        'www.hornyheroes.com'
+    ].includes(location.host)
+    const isPSH = [
+        'www.pornstarharem.com',
+        'nutaku.pornstarharem.com'
+    ].includes(location.host)
+    const isHH = !(isGH || isCxH || isHoH || isPSH)
 
     const CDNs = {
         'nutaku.haremheroes.com': 'hh.hh-content.com',
@@ -54,7 +63,9 @@
         'www.comixharem.com': 'ch.hh-content.com',
         'nutaku.comixharem.com': 'ch.hh-content.com',
         'www.gayharem.com': 'gh1.hh-content.com',
-        'nutaku.gayharem.com': 'gh.hh-content.com'
+        'nutaku.gayharem.com': 'gh.hh-content.com',
+        'www.hornyheroes.com': 'sh.hh-content.com',
+        'www.pornstarharem.com': 'th.hh-content.com'
     }
     const cdnHost = CDNs[location.host] || 'hh.hh-content.com'
 
@@ -133,9 +144,34 @@
                 B3: 'Sly Mans Anti-sleep pills',
                 B4: 'Super Juice injector'
             }
+        },
+        PST: {
+            girl: 'girl',
+            Girl: 'Girl',
+            career: 'Career',
+            waifu: 'Waifu',
+            pachinko: 'Night-club',
+            books: {
+                XP1: 'Magazine',
+                XP2: 'Book',
+                XP3: 'Encyclopedia',
+                XP4: 'Spell Book'
+            },
+            gifts: {
+                K1: 'Flowers',
+                K2: 'Chocolates',
+                K3: 'Bracelet',
+                K4: 'Lingerie'
+            },
+            boosters: {
+                B1: 'Ginseng Root',
+                B2: 'Jujbues',
+                B3: 'Chlorella',
+                B4: 'Cordyceps'
+            }
         }
     }
-    const gameConfig = isGH ? gameConfigs.GH : isCxH ? gameConfigs.CxH : gameConfigs.HH
+    const gameConfig = isGH ? gameConfigs.GH : isCxH ? gameConfigs.CxH : isHoH ? gameConfigs.PSH : gameConfigs.HH
 
     const HC = 1;
     const CH = 2;
@@ -1068,7 +1104,7 @@
                     let cycle = waifuInfo.cycle || false
                     let mode = waifuInfo.mode || 'All'
                     let ids = this.getIds(waifuInfo, mode)
-                    let girl_id = waifuInfo.girl_id || game_girl_id;
+                    let girl_id = waifuInfo.girl_id || waifu.id_girl;
                     if (cycle) {
                         let temp_id = girl_id
                         if (ids.length == 1) {
@@ -1363,6 +1399,9 @@
                         lsSet('WaifuInfo', waifuInfo)
                     })
 
+                    $('.promo_discount').remove()
+                    $('#blog_button').remove()
+
                     sheet.insertRule(`
                     .hide {
                         display: none!important;
@@ -1506,13 +1545,31 @@
             return currentPage.includes('pachinko')
         }
 
-        attachButton () {
-            $('.record_pachinko').eq(0).click(() => {
-                const type = $('.playing-zone').eq(0).attr('type-panel')+'1'
-                const pachinko_log = lsGet('PachinkoLog') || {}
-                const log = pachinko_log[type] || []
-                console.log(type)
+        attachLog () {
+            const $button = $('<div class="blue_circular_btn pachinko-log-btn"><span class="info_icn"></span></div>')
+            const $panel = $(`<div class="pachinko-log-panel"></div>`)
+            const $overlayBG = $('<div class="pachinko-log-overlay-bg"></div>')
+            $('#playzone-replace-info').append($button).append($panel).append($overlayBG)
+
+            $button.click(() => {
+                if ($panel.hasClass('visible')) {
+                    $panel.removeClass('visible')
+                    $overlayBG.removeClass('visible')
+                } else {
+                    $panel.addClass('visible')
+                    $overlayBG.addClass('visible')
+                }
             })
+
+            $overlayBG.click(() => {
+                $panel.removeClass('visible')
+                $overlayBG.removeClass('visible')
+            })
+
+            const type = $('.playing-zone').eq(0).attr('type-panel')+'1'
+            const pachinko_log = lsGet('PachinkoLog') || {}
+            const log = pachinko_log[type] || []
+            console.log(type)
         }
 
         run () {
@@ -1547,29 +1604,199 @@
             }
 
             HHPlusPlus.Helpers.defer(() => {
-                /*let $copylog = $(`<div class="record_pachinko"><img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://hh.hh-content.com/design/ic_books_gray.svg"></div>`)
-                $('.playing-zone .container').append($copylog)
+                let no_girls = {};
+                pachinkoDef.forEach((pachinko) => {
+                    no_girls[pachinko.type] = pachinko.content.rewards.girl_shards? false : true
+                });
 
-                this.attachButton()
-                new MutationObserver(() => this.attachButton()).observe($('.playing-zone')[0], {attributes: true})
+                /*let $copylog = $(`<div class="record_pachinko"><img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://hh.hh-content.com/design/ic_books_gray.svg"></div>`)
+                $('.playing-zone .container').append($copylog)*/
+
+                //this.attachLog()
+                //new MutationObserver(() => this.attachLog()).observe($('#playzone-replace-info')[0], {attributes: true})
 
                 sheet.insertRule(`
-                .record_pachinko {
+                .pachinko-log-btn {
+                   position: absolute;
+                   top: 2px;
+                   right: 44px;
+                   width: 35px;
+                   height: 35px;
+                }`)
+                sheet.insertRule(`
+                .playing-zone .wrapper {
+                    overflow: visible;
+                }`);
+                sheet.insertRule(`
+                .pachinko-log-overlay-bg {
+                    display: none;
+                    width: 150%;
+                    height: 120%;
                     position: absolute;
-                    right: 8px;
+                    top: -10%;
+                    left: -25%;
+                    z-index: 51;
+                }`);
+                sheet.insertRule(`
+                .pachinko-log-panel {
+                    display: none;
+                    background-color: #080808f5;
+                    color: #fff;
+                    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
+                    font-weight: 400;
+                    position: absolute;
                     top: 40px;
-                    cursor: pointer;
-                    z-index: 50;
-                 }`);*/
+                    left: -40px;
+                    width: 450px;
+                    z-index: 52;
+                    border-radius: 5px;
+                    border-width: 5px;
+                    border-style: solid;
+                    border-color: #cccccc42;
+                    padding: 4px;
+                    grid-gap: 10px;
+                    grid-template-columns: auto;
+                    max-height: 470px;
+                    overflow-y: auto;
+                }`);
+                sheet.insertRule(`
+                .pachinko-log-overlay-bg.visible {
+                    display: block;
+                }`);
+                sheet.insertRule(`
+                .pachinko-log-panel.visible {
+                    display: grid;
+                }`);
+                sheet.insertRule(`
+                .summary-header {
+                    display: grid;
+                    grid-template-columns: 1fr 32px 32px;
+                    grid-gap: 10px;
+                    align-content: center;
+                }`);
+                sheet.insertRule(`
+                .pachinko-log-panel h1 {
+                    text-align: center;
+                    font-size: 1.4em;
+                }`);
+                sheet.insertRule(`
+                .pachinko-summary.event h1 {
+                    color: #62d8ff;
+                }`);
+                sheet.insertRule(`
+                .pachinko-summary.epic h1 {
+                    color: #ffa23e;
+                }`);
+                sheet.insertRule(`
+                .pachinko-summary.mythic h1 {
+                    color: #ffb80a;
+                }`);
+                sheet.insertRule(`
+                .pachinko-summary.great h1 {
+                    color: #0bff08;
+                }`);
+                sheet.insertRule(`
+                .summary-header img {
+                    width: 32px;
+                    height: 32px;
+                }`);
+                sheet.insertRule(`
+                .summary-body {
+                    display: grid;
+                    grid-template-columns: 1fr 1em 1fr;
+                    text-align: center;
+                    align-items: center;
+                }`);
+                sheet.insertRule(`
+                .summary-body.great {
+                    grid-template-columns: 1fr;
+                }`);
+                sheet.insertRule(`
+                .summary-div {
+                    display: flex;
+                    flex-wrap: nowrap;
+                    flex-direction: row;
+                    justify-content: center;
+                    align-items: center;
+                }`);
+                sheet.insertRule(`
+                .side-sum-container {
+                    width: 1.5em;
+                    overflow: visible;
+                    display: flex;
+                    justify-content: center;
+                }`);
+                sheet.insertRule(`
+                .rewards-summary .side-sum {
+                    -webkit-transform: rotate(-90deg);
+                    -moz-transform: rotate(-90deg);
+                    -ms-transform: rotate(-90deg);
+                    -o-transform: rotate(-90deg);
+                    font-size: 14px;
+                    display: inline-block;
+                }`);
+                sheet.insertRule(`
+                .side-sum.cat-sum {
+                    font-size: 16px;
+                }`);
+                sheet.insertRule(`
+                .summary-grid {
+                    display: grid;
+                    list-style: none;
+                    grid-template-columns: 1fr 1fr 1fr 1fr;
+                    grid-gap: 0px;
+                    padding: 0px;
+                    margin: 0px;
+                    flex-wrap: nowrap;
+                    font-size: 12px;
+                    flex-basis: 0;
+                    gap: 2px;
+                }`);
+                sheet.insertRule(`
+                .summary-grid img {
+                    width: 40px;
+                    height: 40px;
+                }`);
+                sheet.insertRule(`
+                .summary-grid.legendary img {
+                    background-image: url(https://sh.hh-content.com/legendary.png);
+                    background-size: contain;
+                    background-color: #9150bf;
+                }`);
+                sheet.insertRule(`
+                .summary-grid.epic img {
+                    background: #ffb244;
+                }`);
+                sheet.insertRule(`
+                .summary-grid.rare img {
+                    background: #23b56b;
+                }`);
+                sheet.insertRule(`
+                .equips-summary.legendary {
+                    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+                }`);
+                sheet.insertRule(`
+                .epic .equips-summary.legendary {
+                    width: 164px;
+                }`);
+                sheet.insertRule(`
+                .summary-grid.girls-summary {
+                    grid-template-columns:
+                    min-content;
+                }`);
+                sheet.insertRule(`
+                .summary-grid.gems-summary {
+                    grid-gap: 0px;
+                    align-self: start;
+                }`);
 
                 HHPlusPlus.Helpers.onAjaxResponse(/class=Pachinko&action=play/i, (response, opt) => {
                     const searchParams = new URLSearchParams(opt.data)
                     const pachinko = pachinkoDef.find(o => o.id == searchParams.get('what').slice(-1))
                     const type = pachinko.type
                     const games = searchParams.get('how_many')
-                    const no_girls = pachinko.content.rewards.girl_shards? false : true
                     const rewards = response.rewards.data
-                    const plist = `${type}${games}${(no_girls && !(type == 'great' && games == 1))? 'ng': ''}`
+                    const plist = `${type}${games}${(no_girls[type] && !(type == 'great' && games == 1))? 'ng': ''}`
                     let pachinko_log = lsGet('PachinkoLog') || {}
                     if(!pachinko_log[plist]) {pachinko_log[plist] = [];}
                     let roll = [new Date().getTime()]
@@ -1594,11 +1821,18 @@
                             } else {
                                 roll.push(item+rarity+JSON.parse(items.attr('data-d')).name_add)
                             }
+                        } else if (reward.type == 'frames') {
+                            roll.push(`F${$(reward.value).text()}`)
                         } else if (reward.type == 'gems'){
                             const gem = $(reward.value).attr('generic-tooltip').substring(0,2)
                             roll.push('G'+gem)
                         }
                     })
+
+                    if (response.no_more_girls) {
+                        console.log('no more girls')
+                        no_girls[type] = true
+                    }
 
                     pachinko_log[plist].push(roll.join(','))
                     lsSet('PachinkoLog',pachinko_log)
