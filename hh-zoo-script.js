@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.1
+// @version         0.3.2
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -17,8 +17,9 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.2: Finished pachinko log UI
 // 0.3.1: Bug fixes and support for PsH
-// 0.3.0: Added early pachinko log, UI will be added soon
+// 0.3.0: Added early pachinko log, UI will be added soon™
 // 0.2.3: Fixed some styling due to update
 // 0.2.2: Improved individual waifu selection
 // 0.2.1: Fixed some Improved Waifu bugs
@@ -76,6 +77,7 @@
             career: 'Career',
             waifu: 'Waifu',
             pachinko: 'Pachinko',
+            dom: 'Dominatrix',
             books: {
                 XP1: 'Magazine',
                 XP2: 'Book',
@@ -101,6 +103,7 @@
             career: 'Career',
             waifu: 'Boyfriend',
             pachinko: 'Pachinko',
+            dom: 'Dom',
             books: {
                 XP1: 'Magazine',
                 XP2: 'Book',
@@ -126,6 +129,7 @@
             career: 'Super Power',
             waifu: 'Waifu',
             pachinko: 'Night-club',
+            dom: 'Dominatrix',
             books: {
                 XP1: 'Audio lesson',
                 XP2: 'Personal dev book',
@@ -151,6 +155,7 @@
             career: 'Career',
             waifu: 'Waifu',
             pachinko: 'Night-club',
+            dom: 'Dominatrix',
             books: {
                 XP1: 'Magazine',
                 XP2: 'Book',
@@ -171,7 +176,7 @@
             }
         }
     }
-    const gameConfig = isGH ? gameConfigs.GH : isCxH ? gameConfigs.CxH : isHoH ? gameConfigs.PSH : gameConfigs.HH
+    const gameConfig = isGH ? gameConfigs.GH : isCxH ? gameConfigs.CxH : isPSH ? gameConfigs.PSH : gameConfigs.HH
 
     const HC = 1;
     const CH = 2;
@@ -219,6 +224,9 @@
             }
             document.body.removeChild(textArea);
         })
+    }
+    function capFirst (string) {
+        return string.charAt(0).toUpperCase()+string.slice(1);
     }
 
     class STModule {
@@ -1539,15 +1547,401 @@
                 label: `${gameConfig.pachinko} Log`
             }
             super({name: baseKey, configSchema})
+
+            this.reward_keys = {
+                type: {
+                    X: "books",
+                    K: "gifts",
+                    B: "boosters",
+                    E: "equips",
+                    g: "girls",
+                    G: "gems",
+                    F: "frames"
+                },
+                rarity: {
+                    C: "Common",
+                    R: "Rare",
+                    E: "Epic",
+                    L: "Legendary",
+                    M: "Mythic"
+                },
+                gems: {
+                    GDo: gameConfig.dom,
+                    GSu: "Submissive",
+                    GVo: "Voyeur",
+                    GEc: "Eccentric",
+                    GEx: "Exhibitionist",
+                    GPh: "Physical",
+                    GPl: "Playful",
+                    GSe: "Sensual"
+                }
+            }
         }
 
         shouldRun () {
             return currentPage.includes('pachinko')
         }
 
+        countSummary(pachinko_log, type_info) {
+            let pachinko_type = type_info.match(/\D+/)[0]
+
+            let summary = {total: pachinko_log.length}
+            pachinko_log.forEach((roll) => {
+                let drops = roll.split(',')
+                if (pachinko_type != 'great' || ((Hero.infos.level<100 && drops[1]<100) || (Hero.infos.level>99 && drops[1]>99))) {
+                    drops.slice(pachinko_type != 'great'? 1 : 2).forEach((item) => {
+                        let type = this.reward_keys.type[item[0]]
+                        if (type == 'equips') {
+                            item = item.match(/\D+\d+/g)[1]
+                            if (item[0] != 'L') {
+                                item = item[0]
+                            }
+                            item = 'E'+item
+                        }
+                        if (type == 'girls') {item = 'g'}
+                        summary[type]? summary[type].total++ : summary[type] = {total:1}
+                        summary[type][item] = summary[type][item]+1 || 1
+                        if (type != 'girls' && type !='gems') {
+                            let rarity = `rarity-${type=='equips'? item[1] : item.slice(-1)}`
+                            if (type == 'equips' && rarity!='rarity-L') {
+                                rarity = 'rarity-O'
+                            }
+                            summary[type][rarity] = summary[type][rarity]+1 || 1
+                        }
+                    })
+                }
+            })
+            return summary
+        }
+
+        buildSummary(type_info, summary) {
+            let type = type_info.match(/\D+/)[0]
+            let games = type_info.match(/\d+/)[0]
+            let no_girls = type_info.slice(-2) == 'ng' ? true : false
+            let rewards = games>1? (!no_girls || type=='great')? games-1 : games : 1
+            let reward_keys = this.reward_keys
+
+            function getPct(item) {
+                let cat = reward_keys.type[item[0]]
+                if (item.includes('rarity')) {
+                    item = item.slice(1)
+                }
+                let isTotal = item.length == 1 && item != 'g'
+
+                let count = summary[cat]? summary[cat][isTotal? 'total' : item] || 0 : 0
+                let pct = (100*count/(summary.total * (cat!='gems'? type != 'great'? rewards : games : 1))).toFixed(2)
+
+                return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}hh_title="${count}">${pct}%<span>`)
+            }
+
+            return (`
+            <div class="pachinko-summary ${type} ${games}-game${no_girls? ' no-girls' : ''} ${type_info}">
+                <div class="summary-header">
+                    <h1>${capFirst(type)}-${games}-${games>1? 'Games' : 'Game'}${no_girls? ' - No-Girls' : ''}</h1>
+                    <span class="log-button record-log" pachinko="${type_info}">
+                        <img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://${cdnHost}/design/ic_books_gray.svg">
+                    </span>
+                    <span class="log-button reset-log" pachinko="${type_info}">
+                        <img alt="Reset ${gameConfig.pachinko} Log" hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/clubs/ic_xCross.png">
+                    </span>
+                </div>
+                <div class="summary-body ${type}">
+                    <span>${rewards>1? rewards : ''} Random ${games>1? 'Rewards' : 'Reward'}${(type == 'great' && games == 10)? ' + 1 Legendary Equip' : ''}</span>
+                    ${type == 'great'? '' :
+                    `<span>+</span>
+                    <span>${type == 'mythic'? games == '1'? '10': games == '3'? '10 Shards and<br>30' : '25 Shards and<br>60' : ''}
+                          ${type == 'epic'? games == '1'? `${isHH? '1 Frame and ' : ''}50`: `1 Girl${isHH? ', 10 Frames,' : ''} and<br> 200` : ''} Gems</span>`}
+                    <div class="rewards-summary">
+                        ${no_girls || (games>1 && type!='great') || (games==1 && type=='great') ? '' :
+                        `<div class="summary-div">
+                            <ul class="summary-grid girls-summary">
+                                <li>
+                                    <img alt="${gameConfig.Girl}" hh_title="${gameConfig.Girl}" src="https://${cdnHost}/pictures/design/harem.svg">
+                                    ${getPct('g')}
+                                </li>
+                            </ul>
+                        </div>`}
+                        <div class="summary-div">
+                            ${type != 'great'? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('X')}
+                            </div>`}
+                            ${(type=='great' && Hero.infos.level<100)? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('Xrarity-L')}
+                            </div>
+                            <ul class="summary-grid books-summary legendary">
+                                <li>
+                                    <img alt="${gameConfig.books.XP1}" hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
+                                    ${getPct('XP1L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.books.XP2}" hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
+                                    ${getPct('XP2L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.books.XP3}" hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
+                                    ${getPct('XP3L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.books.XP4}" hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
+                                    ${getPct('XP4L')}
+                                </li>
+                            </ul>`}
+                            ${type != 'great'? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('Xrarity-E')}
+                            </div>
+                            <ul class="summary-grid books-summary epic">
+                                <li>
+                                    <img alt="${gameConfig.books.XP1}" hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
+                                    ${getPct('XP1E')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.books.XP2}" hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
+                                    ${getPct('XP2E')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.books.XP3}" hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
+                                    ${getPct('XP3E')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.books.XP4}" hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
+                                    ${getPct('XP4E')}
+                                </li>
+                            </ul>
+                            ${Hero.infos.level>99? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('Krarity-R')}
+                            </div>
+                            <ul class="summary-grid books-summary rare">
+                                <li>
+                                    <img alt="${gameConfig.gifts.XP1}" hh_title="${gameConfig.gifts.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
+                                    ${getPct('XP1R')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.XP2}" hh_title="${gameConfig.gifts.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
+                                    ${getPct('XP2R')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.XP3}" hh_title="${gameConfig.gifts.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
+                                    ${getPct('XP3R')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.XP4}" hh_title="${gameConfig.gifts.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
+                                    ${getPct('XP4R')}
+                                </li>
+                            </ul>`}`}
+                        </div>
+                        ${type == 'mythic'? '' :
+                        `<div class="summary-div">
+                            ${type != 'great'? '' :
+                            `<div class="side-sum-container">
+                               ${getPct('K')}
+                            </div>`}
+                            ${(type=='great' && Hero.infos.level<100)? '' :
+                            `<div class="side-sum-container">
+                               ${getPct('Krarity-L')}
+                            </div>
+                            <ul class="summary-grid gifts-summary legendary">
+                                <li>
+                                    <img alt="${gameConfig.gifts.K1}" hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
+                                    ${getPct('K1L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K2}" hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
+                                    ${getPct('K2L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K3}" hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
+                                    ${getPct('K3L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K4}" hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
+                                    ${getPct('K4L')}
+                                </li>
+                            </ul>`}
+                            ${type != 'great'? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('Krarity-E')}
+                            </div>
+                            <ul class="summary-grid books-summary epic">
+                                <li>
+                                    <img alt="${gameConfig.gifts.K1}" hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
+                                    ${getPct('K1E')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K2}" hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
+                                    ${getPct('K2E')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K3}" hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
+                                    ${getPct('K3E')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K4}" hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
+                                    ${getPct('K4E')}
+                                </li>
+                            </ul>
+                            ${Hero.infos.level>99? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('Krarity-R')}
+                            </div>
+                            <ul class="summary-grid books-summary rare">
+                                <li>
+                                    <img alt="${gameConfig.gifts.K1}" hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
+                                    ${getPct('K1R')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K2}" hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
+                                    ${getPct('K2R')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K3}" hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
+                                    ${getPct('K3R')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.gifts.K4}" hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
+                                    ${getPct('K4R')}
+                                </li>
+                            </ul>`}`}
+                        </div>`}
+                        ${type == 'great' || (type == 'epic' && games == '1')? '' :
+                        `<div class="summary-div">
+                            <div class="side-sum-container">
+                                ${getPct('Brarity-L')}
+                            </div>
+                            <ul class="summary-grid boosters-summary legendary">
+                                <li>
+                                    <img alt="${gameConfig.boosters.B1}" hh_title="${gameConfig.boosters.B1}" src="https://${cdnHost}/pictures/items/B1.png">
+                                    ${getPct('B1L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.boosters.B2}" hh_title="${gameConfig.boosters.B2}" src="https://${cdnHost}/pictures/items/B2.png">
+                                    ${getPct('B2L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.boosters.B3}" hh_title="${gameConfig.boosters.B3}" src="https://${cdnHost}/pictures/items/B3.png">
+                                    ${getPct('B3L')}
+                                </li>
+                                <li>
+                                    <img alt="${gameConfig.boosters.B4}" hh_title="${gameConfig.boosters.B4}" src="https://${cdnHost}/pictures/items/B4.png">
+                                    ${getPct('B4L')}
+                                </li>
+                            </ul>
+                        </div>`}
+                        ${type == 'mythic' || (type =='epic' && games == '1')? '' :
+                        `<div class="summary-div">
+                            ${(type != 'great' || (Hero.infos.level<100 && games == '1'))? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('E')}
+                            </div>`}
+                            ${(Hero.infos.level<100 && type == 'great' && games == '1')? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('Erarity-L')}
+                            </div>
+                            <ul class="summary-grid equips-summary legendary">
+                                <li>
+                                    <img alt="Super Sexy" hh_title="Super Sexy" src="https://${cdnHost}/pictures/misc/items_icons/16.svg">
+                                    ${getPct('EL16')}
+                                </li>
+                                <li>
+                                    <img alt="Hardcore" hh_title="Hardcore" src="https://${cdnHost}/pictures/misc/items_icons/1.png">
+                                    ${getPct('EL1')}
+                                </li>
+                                <li>
+                                    <img alt="Charming" hh_title="Charming" src="https://${cdnHost}/pictures/misc/items_icons/2.png">
+                                    ${getPct('EL2')}
+                                </li>
+                                <li>
+                                    <img alt="Expert" hh_title="Expert" src="https://${cdnHost}/pictures/misc/items_icons/3.png">
+                                    ${getPct('EL3')}
+                                </li>
+                                <li>
+                                    <img alt="Tough" hh_title="Tough" src="https://${cdnHost}/pictures/misc/items_icons/4.png">
+                                    ${getPct('EL4')}
+                                </li>
+                                <li>
+                                    <img alt="Lucky" hh_title="Lucky" src="https://${cdnHost}/pictures/misc/items_icons/5.png">
+                                    ${getPct('EL5')}
+                                </li>
+                            </ul>`}
+                            ${type != 'great'? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('Erarity-O')}
+                            </div>
+                            <ul class="summary-grid equips-summary epic">
+                                <li>
+                                    <img alt="Equip" hh_title="Epic Equip" src="https://${cdnHost}/pictures/items/EH1.png">
+                                    ${getPct('EE')}
+                                </li>
+                            </ul>
+                            ${(games == '1' && Hero.infos.level>99)? '' :
+                            `<ul class="summary-grid equips-summary rare">
+                                <li>
+                                    <img alt="Equip" hh_title="Rare Equip" src="https://${cdnHost}/pictures/items/EH1.png">
+                                    ${getPct('ER')}
+                                </li>
+                            </ul>`}`}
+                        </div>`}
+                    </div>
+                    ${type == 'great'? '' :
+                    `<span></span>
+                    <ul class="summary-grid gems-summary">
+                        <li>
+                            <img alt="${gameConfig.dom} Gems" hh_title="${gameConfig.dom} Gems" src="https://${cdnHost}/pictures/design/gems/darkness.png">
+                            ${getPct('GDo')}
+                        </li>
+                        <li>
+                            <img alt="Submissive Gems" hh_title="Submissive Gems" src="https://${cdnHost}/pictures/design/gems/light.png">
+                            ${getPct('GSu')}
+                        </li>
+                        <li>
+                            <img alt="Voyeur Gems" hh_title="Voyeur Gems" src="https://${cdnHost}/pictures/design/gems/psychic.png">
+                            ${getPct('GVo')}
+                        </li>
+                        <li>
+                            <img alt="Eccentric Gems" hh_title="Eccentric Gems" src="https://${cdnHost}/pictures/design/gems/fire.png">
+                            ${getPct('GEc')}
+                        </li>
+                        <li>
+                            <img alt="Exhibitionist Gems" hh_title="Exhibitionist Gems" src="https://${cdnHost}/pictures/design/gems/nature.png">
+                            ${getPct('GEx')}
+                        </li>
+                        <li>
+                            <img alt="Physical Gems" hh_title="Physical Gems" src="https://${cdnHost}/pictures/design/gems/stone.png">
+                            ${getPct('GPh')}
+                        </li>
+                        <li>
+                            <img alt="Playful Gems" hh_title="Playful Gems" src="https://${cdnHost}/pictures/design/gems/sun.png">
+                            ${getPct('GPl')}
+                        </li>
+                        <li>
+                            <img alt="Sensual Gems" hh_title="Sensual Gems" src="https://${cdnHost}/pictures/design/gems/water.png">
+                            ${getPct('GSe')}
+                        </li>
+                    </ul>`}
+                </div>
+            </div>
+            `)
+        }
+
+        buildSummaries() {
+            const type = $('.playing-zone').eq(0).attr('type-panel')
+            const pachinko_log = lsGet('PachinkoLog') || {}
+            let types = Object.keys(pachinko_log).filter(t => t.includes(type)).sort().sort((a,b) => a.match(/\d+/)[0]-b.match(/\d+/)[0])
+
+            let summaries = ``
+            types.forEach((t) => {
+                summaries += this.buildSummary(t,this.countSummary(pachinko_log[t],t))
+            })
+
+            return summaries
+        }
+
         attachLog () {
             const $button = $('<div class="blue_circular_btn pachinko-log-btn"><span class="info_icn"></span></div>')
-            const $panel = $(`<div class="pachinko-log-panel"></div>`)
+            const $panel = $(`<div class="pachinko-log-panel">${this.buildSummaries()}</div>`)
             const $overlayBG = $('<div class="pachinko-log-overlay-bg"></div>')
             $('#playzone-replace-info').append($button).append($panel).append($overlayBG)
 
@@ -1566,42 +1960,61 @@
                 $overlayBG.removeClass('visible')
             })
 
-            const type = $('.playing-zone').eq(0).attr('type-panel')+'1'
-            const pachinko_log = lsGet('PachinkoLog') || {}
-            const log = pachinko_log[type] || []
-            console.log(type)
+            const reward_keys = this.reward_keys
+            function copyLog(pachinko,pachinko_log) {
+                const type = pachinko.match(/\D+/)[0]
+                let log = ''
+
+                pachinko_log.forEach((roll) => {
+                    let drops = roll.split(',').filter(e => e[0]!='F') //no need to print frames
+                    let offset = type != 'great'? 1 : 2
+                    drops.slice(offset).forEach((item, index) => {
+                        const cat = reward_keys.type[item[0]]
+                        let drop = item
+                        if (cat == 'books' || cat == 'gifts' || cat == 'boosters') {
+                            const rarity = reward_keys.rarity[item.slice(-1)]
+                            const name = gameConfig[cat][item.slice(0,-1)]
+                            drop = `${type=='great'? `${rarity} ` : ''}${name}`
+                        }else if (cat == 'girls') {
+                            const girlDict = HHPlusPlus.Helpers.getGirlDictionary()
+                            drop = girlDict.get(item.match(/\d+/g)[0]).name
+                        }else if (cat == 'gems') {
+                            drop = reward_keys.gems[item]
+                        }else if (cat == 'frames') {
+                            let frames = item.match(/\d+/g)[0]
+                            drop = frames==1? 'Frame' : `${frames} Frames`
+                        }
+                        drops[index+offset] = drop
+                    })
+
+                    log += `${drops.join('\t')}\n`
+                })
+
+                copyText(log)
+            }
+
+            $('.log-button.record-log').each(function (index) {
+                let pachinko = $(this).attr('pachinko')
+                $(this).click(() => {
+                    const pachinko_log = lsGet('PachinkoLog') || {}
+                    copyLog(pachinko,pachinko_log[pachinko])
+                })
+            })
+
+            $('.log-button.reset-log').each(function (index) {
+                let pachinko = $(this).attr('pachinko')
+                $(this).click(() => {
+                    let pachinko_log = lsGet('PachinkoLog') || {}
+                    copyLog(pachinko,pachinko_log[pachinko])
+                    delete pachinko_log[pachinko]
+                    $(`.pachinko-summary.${pachinko}`).remove()
+                    lsSet('PachinkoLog', pachinko_log)
+                })
+            })
         }
 
         run () {
             if (this.hasRun || !this.shouldRun()) {return}
-
-            const reward_keys = {
-                type: {
-                    X: "books",
-                    K: "gifts",
-                    B: "boosters",
-                    E: "equips",
-                    g: "gems",
-                    G: "girls"
-                },
-                rarity: {
-                    C: "Common",
-                    R: "Rare",
-                    E: "Epic",
-                    L: "Legendary",
-                    M: "Mythic"
-                },
-                gems: {
-                    GDo: "Dominatrix",
-                    GSu: "Submissive",
-                    GVo: "Voyeur",
-                    GEc: "Eccentric",
-                    GEx: "Exhibitionist",
-                    GPh: "Physical",
-                    GPl: "Playful",
-                    GSe: "Sensual"
-                }
-            }
 
             HHPlusPlus.Helpers.defer(() => {
                 let no_girls = {};
@@ -1609,11 +2022,19 @@
                     no_girls[pachinko.type] = pachinko.content.rewards.girl_shards? false : true
                 });
 
-                /*let $copylog = $(`<div class="record_pachinko"><img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://hh.hh-content.com/design/ic_books_gray.svg"></div>`)
-                $('.playing-zone .container').append($copylog)*/
-
-                //this.attachLog()
-                //new MutationObserver(() => this.attachLog()).observe($('#playzone-replace-info')[0], {attributes: true})
+                if ($('.playing-zone').length) {
+                    this.attachLog()
+                    new MutationObserver(() => this.attachLog()).observe($('.playing-zone')[0], {attributes: true})
+                } else {
+                    const observer = new MutationObserver(() => {
+                        if ($('.playing-zone').length) {
+                            this.attachLog()
+                            new MutationObserver(() => this.attachLog()).observe($('.playing-zone')[0], {attributes: true})
+                            observer.disconnect()
+                        }
+                    })
+                    observer.observe($('#contains_all > section')[0], {childList: true})
+                }
 
                 sheet.insertRule(`
                 .pachinko-log-btn {
