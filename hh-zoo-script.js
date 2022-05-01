@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.2
+// @version         0.3.3
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -17,6 +17,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.3: Added pachinko log support for Event pachinko (don't play event pachinko)
 // 0.3.2: Finished pachinko log UI
 // 0.3.1: Bug fixes and support for PsH
 // 0.3.0: Added early pachinko log, UI will be added soon™
@@ -1616,9 +1617,9 @@
 
         buildSummary(type_info, summary) {
             let type = type_info.match(/\D+/)[0]
-            let games = type_info.match(/\d+/)[0]
+            let games = type!='event'? type_info.match(/\d+/)[0] : 4
             let no_girls = type_info.slice(-2) == 'ng' ? true : false
-            let rewards = games>1? (!no_girls || type=='great')? games-1 : games : 1
+            let rewards = games>1? (type!='event'&&(!no_girls || type=='great'))? games-1 : games : 1
             let reward_keys = this.reward_keys
 
             function getPct(item) {
@@ -1637,12 +1638,12 @@
             return (`
             <div class="pachinko-summary ${type} ${games}-game${no_girls? ' no-girls' : ''} ${type_info}">
                 <div class="summary-header">
+                    <span class="log-button reset-log" pachinko="${type_info}">
+                        <img alt="Reset ${gameConfig.pachinko} Log" hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/clubs/ic_xCross.png">
+                    </span>
                     <h1>${capFirst(type)}-${games}-${games>1? 'Games' : 'Game'}${no_girls? ' - No-Girls' : ''}</h1>
                     <span class="log-button record-log" pachinko="${type_info}">
                         <img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://${cdnHost}/design/ic_books_gray.svg">
-                    </span>
-                    <span class="log-button reset-log" pachinko="${type_info}">
-                        <img alt="Reset ${gameConfig.pachinko} Log" hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/clubs/ic_xCross.png">
                     </span>
                 </div>
                 <div class="summary-body ${type}">
@@ -1652,7 +1653,7 @@
                     <span>${type == 'mythic'? games == '1'? '10': games == '3'? '10 Shards and<br>30' : '25 Shards and<br>60' : ''}
                           ${type == 'epic'? games == '1'? `${isHH? '1 Frame and ' : ''}50`: `1 Girl${isHH? ', 10 Frames,' : ''} and<br> 200` : ''} Gems</span>`}
                     <div class="rewards-summary">
-                        ${no_girls || (games>1 && type!='great') || (games==1 && type=='great') ? '' :
+                        ${no_girls || (games>1 && (type!='great' && type!='event')) || (games==1 && type=='great') ? '' :
                         `<div class="summary-div">
                             <ul class="summary-grid girls-summary">
                                 <li>
@@ -1661,7 +1662,8 @@
                                 </li>
                             </ul>
                         </div>`}
-                        <div class="summary-div">
+                        ${type == 'event'? '' :
+                        `<div class="summary-div">
                             ${type != 'great'? '' :
                             `<div class="side-sum-container">
                                 ${getPct('X')}
@@ -1732,7 +1734,7 @@
                                     ${getPct('XP4R')}
                                 </li>
                             </ul>`}`}
-                        </div>
+                        </div>`}
                         ${type == 'mythic'? '' :
                         `<div class="summary-div">
                             ${type != 'great'? '' :
@@ -1806,7 +1808,7 @@
                                 </li>
                             </ul>`}`}
                         </div>`}
-                        ${type == 'great' || (type == 'epic' && games == '1')? '' :
+                        ${type == 'event' || type == 'great' || (type == 'epic' && games == '1')? '' :
                         `<div class="summary-div">
                             <div class="side-sum-container">
                                 ${getPct('Brarity-L')}
@@ -1932,20 +1934,26 @@
             let types = Object.keys(pachinko_log).filter(t => t.includes(type)).sort().sort((a,b) => a.match(/\d+/)[0]-b.match(/\d+/)[0])
 
             let summaries = ``
-            types.forEach((t) => {
-                summaries += this.buildSummary(t,this.countSummary(pachinko_log[t],t))
-            })
+            if (types.length) {
+                types.forEach((t) => {
+                    summaries += this.buildSummary(t,this.countSummary(pachinko_log[t],t))
+                })
+            }else {
+                summaries = `<h1>No Data Recorded<\h1>`
+            }
 
             return summaries
         }
 
         attachLog () {
+            $('.nicescroll-rails.nicescroll-rails-vr').removeClass('hide')
             const $button = $('<div class="blue_circular_btn pachinko-log-btn"><span class="info_icn"></span></div>')
             const $panel = $(`<div class="pachinko-log-panel">${this.buildSummaries()}</div>`)
             const $overlayBG = $('<div class="pachinko-log-overlay-bg"></div>')
             $('#playzone-replace-info').append($button).append($panel).append($overlayBG)
 
             $button.click(() => {
+                $('.nicescroll-rails.nicescroll-rails-vr').toggleClass('hide')
                 if ($panel.hasClass('visible')) {
                     $panel.removeClass('visible')
                     $overlayBG.removeClass('visible')
@@ -1956,6 +1964,7 @@
             })
 
             $overlayBG.click(() => {
+                $('.nicescroll-rails.nicescroll-rails-vr').toggleClass('hide')
                 $panel.removeClass('visible')
                 $overlayBG.removeClass('visible')
             })
@@ -2037,6 +2046,10 @@
                 }
 
                 sheet.insertRule(`
+                .nicescroll-rails.nicescroll-rails-vr.hide {
+                    display: none!important;
+                }`)
+                sheet.insertRule(`
                 .pachinko-log-btn {
                    position: absolute;
                    top: 2px;
@@ -2091,7 +2104,7 @@
                 sheet.insertRule(`
                 .summary-header {
                     display: grid;
-                    grid-template-columns: 1fr 32px 32px;
+                    grid-template-columns: 32px 1fr 32px;
                     grid-gap: 10px;
                     align-content: center;
                 }`);
@@ -2199,6 +2212,10 @@
                 sheet.insertRule(`
                 .epic .equips-summary.legendary {
                     width: 164px;
+                }`);
+                sheet.insertRule(`
+                .event .equips-summary.legendary {
+                    width: 168px;
                 }`);
                 sheet.insertRule(`
                 .summary-grid.girls-summary {
