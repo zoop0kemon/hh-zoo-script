@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.3
+// @version         0.3.4
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -17,16 +17,17 @@
 /*  ===========
      CHANGELOG
     =========== */
-// 0.3.3: Added pachinko log support for Event pachinko (don't play event pachinko)
-// 0.3.2: Finished pachinko log UI
+// 0.3.4: Fixed Improved Waifu girl name styling and other bug fixes
+// 0.3.3: Added Pachinko Log support for Event Pachinko (don't play Event Pachinko)
+// 0.3.2: Finished Pachinko Log UI
 // 0.3.1: Bug fixes and support for PsH
-// 0.3.0: Added early pachinko log, UI will be added soon™
+// 0.3.0: Added early Pachinko Log, UI will be added soon™
 // 0.2.3: Fixed some styling due to update
-// 0.2.2: Improved individual waifu selection
+// 0.2.2: Improved individual Waifu selection
 // 0.2.1: Fixed some Improved Waifu bugs
 // 0.2.0: Added Improved Waifu
-// 0.1.3: sorted league data
-// 0.1.2: fixed copy to clipboard not working on Nutaku, added more info to "Copy This Week's League"
+// 0.1.3: Sorted league data
+// 0.1.2: Fixed copy to clipboard not working on Nutaku, added more info to "Copy This Week's League"
 // 0.1.1: League Data Collector style and error message fix
 // 0.1.0: Added League Data Collector
 // 0.0.1: Inital version
@@ -150,7 +151,7 @@
                 B4: 'Super Juice injector'
             }
         },
-        PST: {
+        PSH: {
             girl: 'girl',
             Girl: 'Girl',
             career: 'Career',
@@ -158,22 +159,22 @@
             pachinko: 'Night-club',
             dom: 'Dominatrix',
             books: {
-                XP1: 'Magazine',
-                XP2: 'Book',
-                XP3: 'Encyclopedia',
-                XP4: 'Spell Book'
+                XP1: 'Adult comics',
+                XP2: 'Sex for dummies',
+                XP3: 'Sex encyclopedia',
+                XP4: 'Audiobook sex lessons'
             },
             gifts: {
-                K1: 'Flowers',
-                K2: 'Chocolates',
+                K1: 'Cupidon\'s bow', // bugged name
+                K2: 'Lingerie',
                 K3: 'Bracelet',
-                K4: 'Lingerie'
+                K4: 'Butt plug'
             },
             boosters: {
-                B1: 'Ginseng Root',
-                B2: 'Jujbues',
-                B3: 'Chlorella',
-                B4: 'Cordyceps'
+                B1: 'Potion',
+                B2: 'Excitant',
+                B3: 'Suspect pills',
+                B4: 'Growing device'
             }
         }
     }
@@ -1165,7 +1166,7 @@
                     let waifu_buttons = $('.waifu-buttons-container').eq(0)
 
                     // pose switch
-                    let gradeSwitch = `<div class="diamond-bar"><div class="girl-name"><span>${dictGirl.name}</span><a href="/waifu.html"><img src="https://${cdnHost}/design/menu/edit.svg"></a></div>`
+                    let gradeSwitch = `<div class="diamond-bar"><div class="girls-name"><a href="/waifu.html">${dictGirl.name}</a><a href="/waifu.html"><img src="https://${cdnHost}/design/menu/edit.svg"></a></div>`
                     for (let i=0;i<7;i++) {
                         gradeSwitch += `<div class="diamond${i==selected_grade? ' selected': ''} ${i<=unlocked_grade ? 'un' : ''}locked${i>max_grade? ' hide' : ''}"></div>`
                     }
@@ -1380,7 +1381,7 @@
 
                         waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
                         setTransform();
-                        $('.girl-name span').eq(0).text(dictGirl.name)
+                        $('.girls-name a').eq(0).text(dictGirl.name)
                         $('.diamond').each(function (index) {
                             index == selected_grade ? $(this).addClass('selected') : $(this).removeClass('selected')
                             if (index <= unlocked_grade) {
@@ -1437,7 +1438,7 @@
                         justify-content: center;
                     }`);
                     sheet.insertRule(`
-                    .waifu-buttons-container .girl-name {
+                    .waifu-buttons-container .girls-name {
                         position: absolute;
                         bottom: 26px;
                         line-height: 18px;
@@ -1445,7 +1446,12 @@
                         text-shadow: 2px 2px 5px black;
                     }`);
                     sheet.insertRule(`
-                    .girl-name img {
+                    .girls-name a {
+                        color: white;
+                        text-decoration: none;
+                    }`);
+                    sheet.insertRule(`
+                    .girls-name img {
                         width: 16px;
                         height: 16px;
                         margin-left: 5px;
@@ -1650,7 +1656,7 @@
                     <span>${rewards>1? rewards : ''} Random ${games>1? 'Rewards' : 'Reward'}${(type == 'great' && games == 10)? ' + 1 Legendary Equip' : ''}</span>
                     ${type == 'great'? '' :
                     `<span>+</span>
-                    <span>${type == 'mythic'? games == '1'? '10': games == '3'? '10 Shards and<br>30' : '25 Shards and<br>60' : ''}
+                    <span>${type == 'mythic'? games == '1'? '10': games == '3'? '10 Shards and<br>30' : '25 Shards and<br>60' : type == 'event'? '70' : ''}
                           ${type == 'epic'? games == '1'? `${isHH? '1 Frame and ' : ''}50`: `1 Girl${isHH? ', 10 Frames,' : ''} and<br> 200` : ''} Gems</span>`}
                     <div class="rewards-summary">
                         ${no_girls || (games>1 && (type!='great' && type!='event')) || (games==1 && type=='great') ? '' :
@@ -1714,23 +1720,23 @@
                             </ul>
                             ${Hero.infos.level>99? '' :
                             `<div class="side-sum-container">
-                                ${getPct('Krarity-R')}
+                                ${getPct('Xrarity-R')}
                             </div>
                             <ul class="summary-grid books-summary rare">
                                 <li>
-                                    <img alt="${gameConfig.gifts.XP1}" hh_title="${gameConfig.gifts.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
+                                    <img alt="${gameConfig.books.XP1}" hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
                                     ${getPct('XP1R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.XP2}" hh_title="${gameConfig.gifts.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
+                                    <img alt="${gameConfig.books.XP2}" hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
                                     ${getPct('XP2R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.XP3}" hh_title="${gameConfig.gifts.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
+                                    <img alt="${gameConfig.books.XP3}" hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
                                     ${getPct('XP3R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.XP4}" hh_title="${gameConfig.gifts.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
+                                    <img alt="${gameConfig.books.XP4}" hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
                                     ${getPct('XP4R')}
                                 </li>
                             </ul>`}`}
