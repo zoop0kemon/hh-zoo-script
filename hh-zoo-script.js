@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.4
+// @version         0.3.5
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -17,6 +17,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.5: Redid league rollover
 // 0.3.4: Fixed Improved Waifu girl name styling and other bug fixes
 // 0.3.3: Added Pachinko Log support for Event Pachinko (don't play Event Pachinko)
 // 0.3.2: Finished Pachinko Log UI
@@ -1028,11 +1029,17 @@
         run () {
             if (this.hasRun || !this.shouldRun()) {return}
 
-            $(document).on('league:rollover', () => {
-                lsSet('OldLeagueRecord',lsGet('LeagueRecord'))
-            })
-
             $(document).ready(() => {
+                const leagueEndTime = server_now_ts + season_end_at
+                const storedEndTime = lsGet('LeagueEnd')
+
+                if (!storedEndTime) {
+                    lsSet('LeagueEnd', leagueEndTime)
+                } else if (leagueEndTime > storedEndTime) {
+                    lsSet('OldLeagueRecord',lsGet('LeagueRecord'))
+                    lsSet('LeagueEnd', leagueEndTime)
+                }
+
                 this.recordData()
 
                 $(".league_end_in").append(`
@@ -1420,6 +1427,7 @@
                     .waifu-container {
                         z-index: 1;
                         margin-top: 0px;
+                        left: 15px;
                     }`)
                     sheet.insertRule(`
                     .waifu-buttons-container {
@@ -1432,7 +1440,7 @@
                     }`)
                     sheet.insertRule(`
                     .waifu-buttons-container .diamond-bar {
-                        right: 75px;
+                        right: 110px;
                         width: 240px;
                         display: flex;
                         justify-content: center;
