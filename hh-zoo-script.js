@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.5
+// @version         0.3.6
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
 // @match           https://*.comixharem.com/*
 // @match           https://*.hornyheroes.com/*
+// @match           https://*.pornstarharem.com/*
 // @run-at          document-body
 // @updateURL       https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
 // @downloadURL     https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
@@ -17,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.6: Fixed Pachinko Log for Firefox and added sample size display
 // 0.3.5: Redid league rollover
 // 0.3.4: Fixed Improved Waifu girl name styling and other bug fixes
 // 0.3.3: Added Pachinko Log support for Event Pachinko (don't play Event Pachinko)
@@ -698,7 +700,7 @@
                     girlIDs.forEach(element => {
                         text += this.printGirl(element, girlData[element])
                     })
-                    CopyText(text)
+                    copyText(text)
                 })
 
                 //copy new girls
@@ -1656,6 +1658,7 @@
                         <img alt="Reset ${gameConfig.pachinko} Log" hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/clubs/ic_xCross.png">
                     </span>
                     <h1>${capFirst(type)}-${games}-${games>1? 'Games' : 'Game'}${no_girls? ' - No-Girls' : ''}</h1>
+                    <span class="sample-count orb_icon o_${type!='event'? type[0] : 'v'}${games}" hh_title="Sample Size">${summary.total}</span>
                     <span class="log-button record-log" pachinko="${type_info}">
                         <img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://${cdnHost}/design/ic_books_gray.svg">
                     </span>
@@ -2039,7 +2042,7 @@
         run () {
             if (this.hasRun || !this.shouldRun()) {return}
 
-            HHPlusPlus.Helpers.defer(() => {
+            $(document).ready(() => {
                 let no_girls = {};
                 pachinkoDef.forEach((pachinko) => {
                     no_girls[pachinko.type] = pachinko.content.rewards.girl_shards? false : true
@@ -2056,7 +2059,7 @@
                             observer.disconnect()
                         }
                     })
-                    observer.observe($('#contains_all > section')[0], {childList: true})
+                    observer.observe($('#pachinko_whole')[0], {childList: true})
                 }
 
                 sheet.insertRule(`
@@ -2118,9 +2121,10 @@
                 sheet.insertRule(`
                 .summary-header {
                     display: grid;
-                    grid-template-columns: 32px 1fr 32px;
+                    grid-template-columns: 32px 1fr 50px 32px;
                     grid-gap: 10px;
                     align-content: center;
+                    justify-items: center;
                 }`);
                 sheet.insertRule(`
                 .pachinko-log-panel h1 {
@@ -2147,6 +2151,13 @@
                 .summary-header img {
                     width: 32px;
                     height: 32px;
+                }`);
+                sheet.insertRule(`
+                .summary-header .sample-count {
+                    background-position: center;
+                    text-align: center;
+                    text-shadow: 2px 2px 2px black;
+                    padding-top: 10px;
                 }`);
                 sheet.insertRule(`
                 .summary-body {
