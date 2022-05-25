@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.6
+// @version         0.3.7
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.7: League Data Collector support for mobile
 // 0.3.6: Fixed Pachinko Log for Firefox and added sample size display
 // 0.3.5: Redid league rollover
 // 0.3.4: Fixed Improved Waifu girl name styling and other bug fixes
@@ -168,7 +169,7 @@
                 XP4: 'Audiobook sex lessons'
             },
             gifts: {
-                K1: 'Cupidon\'s bow', // bugged name
+                K1: 'Drink',
                 K2: 'Lingerie',
                 K3: 'Bracelet',
                 K4: 'Butt plug'
@@ -978,12 +979,14 @@
             const leadTable = document.getElementsByClassName("leadTable")[0];
 
             for (let i=0;i<leadTable.childElementCount;i++) {
+                const playerRow = $(leagues_list[i].html.replaceAll('\t','').replaceAll('\n',''))
+
                 leagueData.playerList.push({
                     id: leagues_list[i].id_player,
-                    name: leadTable.children[i].children[1].children[2].textContent,
-                    level: leadTable.children[i].children[2].innerText.trim(),
-                    flag: leadTable.children[i].children[1].children[1].getAttribute("hh_title"),
-                    points: leadTable.children[i].children[4].innerText.trim().replace(/,/g, '')
+                    name: $(playerRow).find('.nickname').text(),
+                    level: leagues_list[i].level,
+                    flag: $(playerRow).find('.country').attr('hh_title'),
+                    points: $(playerRow[4]).text().replace(/,/g, '')
                 })
             }
 
@@ -1064,15 +1067,29 @@
                 })
 
                 sheet.insertRule(`
-                .individualDisplaySwitch {
-                    left: 55px!important;
+                @media (min-width: 1026px) {
+                    .individualDisplaySwitch {
+                        left: 55px!important;
+                    }
                 }`);
                 sheet.insertRule(`
                 .record_league {
                     position: absolute;
-                    left: 140px;
-                    top: -37px;
                     cursor: pointer;
+                }`);
+                sheet.insertRule(`
+                @media (min-width: 1026px) {
+                    .record_league {
+                        left: 140px;
+                        top: -37px;
+                    }
+                }`);
+                sheet.insertRule(`
+                @media (max-width: 1025px) {
+                    .record_league {
+                        left: 530px;
+                        top: 6px;
+                    }
                 }`);
                 sheet.insertRule(`
                 .record_league >span#last_week {
