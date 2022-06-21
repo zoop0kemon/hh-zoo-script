@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.7
+// @version         0.3.8
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.8: Fixed League Data Collector bug when some opponents are hidden. Fixed Girl Data Record bug when new girl was removed from harem page. Some fixes to better support other languages.
 // 0.3.7: League Data Collector support for mobile
 // 0.3.6: Fixed Pachinko Log for Firefox and added sample size display
 // 0.3.5: Redid league rollover
@@ -499,10 +500,6 @@
             return currentPage.includes('harem') && !currentPage.includes('hero')
         }
 
-        capFirst (string) {
-            return string.charAt(0).toUpperCase()+string.slice(1);
-        }
-
         cleanData (string) {
             if (string == null) {
                 return ''
@@ -522,7 +519,7 @@
                 full_name: this.cleanData(ref.full_name),
                 element: GT.design[element+'_flavor_element'],
                 class: GT.caracs[girl_class],
-                rarity: this.capFirst(girl.rarity),
+                rarity: capFirst(girl.rarity),
                 stars: (girl.graded2.match(/\<\/g\>/g) || []).length,
                 pose: pose == "Doggie style" ? "Doggie Style" : pose,
                 hair: ref.hair.replaceAll(/<(.*?)>/g,''),
@@ -555,10 +552,14 @@
             return copyText
         }
 
-        buildNewGirlList (newGirls){
+        buildNewGirlList (newGirls) {
             let list = ''
             for (let i=0;i<newGirls.length;i++){
-                list += `<li>${girlsDataList[newGirls[i]].name}</li>`
+                if (girlsDataList[newGirls[i]]) {
+                    list += `<li>${girlsDataList[newGirls[i]].name}</li>`
+                } else {
+                    list += `<li>[REMOVED ID:${newGirls[i]}]</li>`
+                }
             }
 
             return list
@@ -976,9 +977,8 @@
 
         recordData () {
             let leagueData = {date: new Date(), playerList: []}
-            const leadTable = document.getElementsByClassName("leadTable")[0];
 
-            for (let i=0;i<leadTable.childElementCount;i++) {
+            for (let i=0;i<leagues_list.length;i++) {
                 const playerRow = $(leagues_list[i].html.replaceAll('\t','').replaceAll('\n',''))
 
                 leagueData.playerList.push({
@@ -986,7 +986,7 @@
                     name: $(playerRow).find('.nickname').text(),
                     level: leagues_list[i].level,
                     flag: $(playerRow).find('.country').attr('hh_title'),
-                    points: $(playerRow[4]).text().replace(/,/g, '')
+                    points: $(playerRow[4]).text().match(/\d+/g).join('')
                 })
             }
 
@@ -2270,6 +2270,16 @@
                     align-self: start;
                 }`);
 
+                const gems_abrv = {
+                    'darkness': 'GDo',
+                    'light': 'GSu',
+                    'psychic': 'GVo',
+                    'fire': 'GEc',
+                    'nature': 'GEx',
+                    'stone': 'GPh',
+                    'sun': 'GPl',
+                    'water': 'GSe'
+                }
                 HHPlusPlus.Helpers.onAjaxResponse(/class=Pachinko&action=play/i, (response, opt) => {
                     const searchParams = new URLSearchParams(opt.data)
                     const pachinko = pachinkoDef.find(o => o.id == searchParams.get('what').slice(-1))
@@ -2304,8 +2314,8 @@
                         } else if (reward.type == 'frames') {
                             roll.push(`F${$(reward.value).text()}`)
                         } else if (reward.type == 'gems'){
-                            const gem = $(reward.value).attr('generic-tooltip').substring(0,2)
-                            roll.push('G'+gem)
+                            const gem = $(reward.value).attr('src').match(/(?<=gems\/)(.+)(?=\.png)/g)[0]
+                            roll.push(gems_abrv[gem])
                         }
                     })
 
@@ -2315,7 +2325,7 @@
                     }
 
                     pachinko_log[plist].push(roll.join(','))
-                    lsSet('PachinkoLog',pachinko_log)
+                    lsSet('PachinkoLog', pachinko_log)
                 })
             })
 
