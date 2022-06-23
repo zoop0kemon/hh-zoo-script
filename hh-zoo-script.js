@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.8
+// @version         0.3.9
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.9: Fixed Girl Data Record, due to missing global unable to record pose info
 // 0.3.8: Fixed League Data Collector bug when some opponents are hidden. Fixed Girl Data Record bug when new girl was removed from harem page. Some fixes to better support other languages.
 // 0.3.7: League Data Collector support for mobile
 // 0.3.6: Fixed Pachinko Log for Firefox and added sample size display
@@ -73,7 +74,8 @@
         'www.gayharem.com': 'gh1.hh-content.com',
         'nutaku.gayharem.com': 'gh.hh-content.com',
         'www.hornyheroes.com': 'sh.hh-content.com',
-        'www.pornstarharem.com': 'th.hh-content.com'
+        'www.pornstarharem.com': 'th.hh-content.com',
+        'nutaku.pornstarharem.com': 'th.hh-content.com'
     }
     const cdnHost = CDNs[location.host] || 'hh.hh-content.com'
 
@@ -511,14 +513,15 @@
             const girl = girlsDataList[id]
             const ref = girl.ref
             const element = girl.element
-            const girl_class = all_possible_girls[id].class
-            const pose = GT.figures[all_possible_girls[id].figure];
+            //const girl_class = all_possible_girls[id].class
+            //const pose = GT.figures[all_possible_girls[id].figure];
+            const pose = GT.figures[girl.figure] || '';
 
             let girlInfo = {
                 name: girl.name,
                 full_name: this.cleanData(ref.full_name),
                 element: GT.design[element+'_flavor_element'],
-                class: GT.caracs[girl_class],
+                class: GT.caracs[girl.class],
                 rarity: capFirst(girl.rarity),
                 stars: (girl.graded2.match(/\<\/g\>/g) || []).length,
                 pose: pose == "Doggie style" ? "Doggie Style" : pose,
@@ -531,7 +534,7 @@
                 food: ref.hobbies.food,
                 hobby: ref.hobbies.hobby,
                 fetish: ref.hobbies.fetish,
-                style: GT.design['girl_style_'+element+'_'+girl_class],
+                style: GT.design['girl_style_'+element+'_'+girl.class],
                 desc: this.desc ? this.cleanData(ref.desc.replaceAll('\n','')) : '',
                 ref_id: ref.id_girl_ref
             }
@@ -642,7 +645,7 @@
 
                         for (const [key, value] of Object.entries(newData)) {
                             if (value!=oldData[key]) {
-                                if (!(key=='desc' && (value=='' || oldData[key]==''))) {
+                                if (!((key=='desc' || key=='pose') && (value=='' || oldData[key]==''))) {//change back once pose is back
                                     dataChanges.push({
                                         id: id,
                                         field: key,
