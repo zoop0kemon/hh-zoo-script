@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.9
+// @version         0.3.10
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.3.10: Changed pachinko log rest icon, and fixed great game girl chance display
 // 0.3.9: Fixed Girl Data Record, due to missing global unable to record pose info
 // 0.3.8: Fixed League Data Collector bug when some opponents are hidden. Fixed Girl Data Record bug when new girl was removed from harem page. Some fixes to better support other languages.
 // 0.3.7: League Data Collector support for mobile
@@ -1666,7 +1667,7 @@
                 let isTotal = item.length == 1 && item != 'g'
 
                 let count = summary[cat]? summary[cat][isTotal? 'total' : item] || 0 : 0
-                let pct = (100*count/(summary.total * (cat!='gems'? type != 'great'? rewards : games : 1))).toFixed(2)
+                let pct = (100*count/(summary.total * (cat!='gems'? type == 'great'? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
 
                 return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}hh_title="${count}">${pct}%<span>`)
             }
@@ -1675,7 +1676,7 @@
             <div class="pachinko-summary ${type} ${games}-game${no_girls? ' no-girls' : ''} ${type_info}">
                 <div class="summary-header">
                     <span class="log-button reset-log" pachinko="${type_info}">
-                        <img alt="Reset ${gameConfig.pachinko} Log" hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/clubs/ic_xCross.png">
+                        <img alt="Reset ${gameConfig.pachinko} Log" hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/caracs/no_class.png">
                     </span>
                     <h1>${capFirst(type)}-${games}-${games>1? 'Games' : 'Game'}${no_girls? ' - No-Girls' : ''}</h1>
                     <span class="sample-count orb_icon o_${type!='event'? type[0] : 'v'}${games}" hh_title="Sample Size">${summary.total}</span>
