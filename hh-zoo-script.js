@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.3.10
+// @version         0.4.0
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.4.0: Added Copy Contests. Copying flag info is now translated to English.
 // 0.3.10: Changed pachinko log rest icon, and fixed great game girl chance display
 // 0.3.9: Fixed Girl Data Record, due to missing global unable to record pose info
 // 0.3.8: Fixed League Data Collector bug when some opponents are hidden. Fixed Girl Data Record bug when new girl was removed from harem page. Some fixes to better support other languages.
@@ -187,6 +188,9 @@
         }
     }
     const gameConfig = isGH ? gameConfigs.GH : isCxH ? gameConfigs.CxH : isPSH ? gameConfigs.PSH : gameConfigs.HH
+
+    const flag_fr=["Andorre", "Émirats Arabes Unis", "Antigua-et-Barbuda", "Albanie", "Arménie", "Antilles Néerlandaises", "Antarctique", "Argentine", "Samoa Américaines", "Autriche", "Australie", "Åland", "Azerbaïdjan", "Bosnie-Herzégovine", "Barbade", "Belgique", "Bulgarie", "Bahreïn", "Bénin", "Bermudes", "Brunei", "Bolivie", "Brésil", "Bhoutan", "Île Bouvet", "Biélorussie", "Îles Cocos", "Centrafrique", "Suisse", "Côte d'Ivoire", "Îles Cook", "Chili", "Cameroun", "Chine", "Colombie", "Serbie-et-Monténégro", "Cap-vert", "Île Christmas", "Chypre", "Tchèque", "Allemagne", "Danemark", "Dominique", "Dominicaine", "Algérie", "Équateur", "Estonie", "Égypte", "Sahara Occidental", "Érythrée", "Espagne", "Éthiopie", "Finlande", "Fidji", "Îles Malouines", "Micronésie", "Îles Féroé", "Royaume-Uni", "Grenade", "Géorgie", "Guyane", "Groenland", "Gambie", "Guinée", "Guinée Équatoriale", "Grèce", "Géorgie du Sud-et-les Îles Sandwich du Sud", "Guinée-Bissau", "Îles Heard-et-MacDonald", "Croatie", "Haïti", "Hongrie", "Indonésie", "Irlande", "Israël", "Île de Man", "Inde", "Territoire Britannique de l'Océan Indien", "Irak", "Islande", "Italie", "Jamaïque", "Jordanie", "Japon", "Kirghizistan", "Cambodge", "Comores", "Saint-Christophe-et-Niévès", "Corée du Nord", "Corée du Sud", "Koweït", "Îles Caïmans", "Laos", "Liban", "Sainte-Lucie", "Libéria", "Lituanie", "Lettonie", "Libye", "Maroc", "Moldavie", "Monténégro", "Saint-Martin (Antilles françaises)", "Marshall", "Macédoine", "Birmanie", "Mongolie", "Îles Mariannes du Nord", "Mauritanie", "Malte", "Maurice", "Mexique", "Malaisie", "Namibie", "Nouvelle-Calédonie", "Île Norfolk", "Nigéria", "Pays-Bas", "Norvège", "Népal", "Niué", "Nouvelle-Zélande", "Pérou", "Polynésie Française", "Papouasie-Nouvelle-Guinée", "Pologne", "Saint-Pierre-et-Miquelon", "Îles Pitcairn", "Porto Rico", "Palestine", "Palaos", "La Réunion", "Roumanie", "Serbie", "Russie", "Arabie Saoudite", "Salomon", "Soudan", "Suède", "Singapour", "Sainte-Hélène", "Slovénie", "Svalbard et Île Jan Mayen", "Slovaquie", "Saint-Marin", "Sénégal", "Somalie", "Soudan du Sud", "Sao Tomé-et-Principe", "Salvador", "Syrie", "Îles Turques-et-Caïques", "Tchad", "Terres Australes Françaises", "Thaïlande", "Tadjikistan", "Timor oriental", "Turkménistan", "Tunisie", "Turquie", "Trinité-et-Tobago", "Taïwan", "Tanzanie", "Ouganda", "Îles Mineures Éloignées des États-Unis", "États-Unis", "Ouzbékistan", "Vatican", "Saint-Vincent-et-les-Grenadines", "Îles Vierges Britanniques", "Îles Vierges des États-Unis", "Viet Nam", "Wallis-et-Futuna", "Mondial", "Yémen", "Afrique du Sud", "Zambie"]
+    const flag_en=["Andorra", "United Arab Emirates", "Antigua and Barbuda", "Albania", "Armenia", "Netherlands Antilles", "Antarctica", "Argentina", "American Samoa", "Austria", "Australia", "Åland Islands", "Azerbaijan", "Bosnia and Herzegovina", "Barbados", "Belgium", "Bulgaria", "Bahrain", "Benin", "Bermuda", "Brunei Darussalam", "Bolivia", "Brazil", "Bhutan", "Bouvet Island", "Belarus", "Cocos (Keeling) Islands", "Central Africa", "Switzerland", "Ivory Coast", "Cook Islands", "Chile", "Cameroon", "China", "Colombia", "Serbia and Montenegro", "Cape Verde", "Christmas Island", "Cyprus", "Czech", "Germany", "Denmark", "Dominica", "Dominican", "Algeria", "Ecuador", "Estonia", "Egypt", "Western Sahara", "Eritrea", "Spain", "Ethiopia", "Finland", "Fiji", "Falkland Islands", "Micronesia", "Faroe Islands", "United Kingdom", "Grenada", "Georgia", "French Guiana", "Greenland", "Gambia", "Guinea", "Equatorial Guinea", "Greece", "South Georgia and the South Sandwich Islands", "Guinea-Bissau", "Heard Island and McDonald Islands", "Croatia", "Haiti", "Hungary", "Indonesia", "Ireland", "Israel", "Isle of Man", "India", "British Indian Ocean Territory", "Iraq", "Iceland", "Italy", "Jamaica", "Jordan", "Japan", "Kyrgyzstan", "Cambodia", "Comoros", "Saint Kitts and Nevis", "North Korea", "South Korea", "Kuwait", "Cayman Islands", "Lao", "Lebanon", "Saint Lucia", "Liberia", "Lithuania", "Latvia", "Libyan Arab Jamahiriya", "Morocco", "Republic of Moldova", "Montenegro", "Saint-Martin", "Marshall Islands", "FYROM", "Myanmar", "Mongolia", "Northern Mariana Islands", "Mauritania", "Malta", "Mauritius", "Mexico", "Malaysia", "Namibia", "New Caledonia", "Norfolk Island", "Nigeria", "Netherlands", "Norway", "Nepal", "Niue", "New Zealand", "Peru", "French Polynesia", "Papua New Guinea", "Poland", "Saint-Pierre and Miquelon", "Pitcairn", "Puerto Rico", "Occupied Palestinian Territory", "Palau", "Réunion", "Romania", "Serbia", "Russian Federation", "Saudi Arabia", "Solomon Islands", "Sudan", "Sweden", "Singapore", "Saint Helena", "Slovenia", "Svalbard and Jan Mayen", "Slovakia", "San Marino", "Senegal", "Somalia", "South Sudan", "Sao Tome and Principe", "El Salvador", "Syrian", "Turks and Caicos Islands", "Chad", "French Southern Territories", "Thailand", "Tajikistan", "Timor-Leste", "Turkmenistan", "Tunisia", "Turkey", "Trinidad and Tobago", "Taiwan", "Tanzania", "Uganda", "United States Minor Outlying Islands", "United States", "Uzbekistan", "Vatican City State", "Saint Vincent and the Grenadines", "British Virgin Islands", "U.S. Virgin Islands", "Vietnam", "Wallis and Futuna", "Worldwide", "Yemen", "South Africa", "Zambia"]
 
     const HC = 1;
     const CH = 2;
@@ -984,12 +988,17 @@
 
             for (let i=0;i<leagues_list.length;i++) {
                 const playerRow = $(leagues_list[i].html.replaceAll('\t','').replaceAll('\n',''))
+                let flag = $(playerRow).find('.country').attr('hh_title')
+                const translation = flag_fr.indexOf(flag)
+                if (translation > -1) {
+                    flag = flag_en[translation]
+                }
 
                 leagueData.playerList.push({
                     id: leagues_list[i].id_player,
                     name: $(playerRow).find('.nickname').text(),
                     level: leagues_list[i].level,
-                    flag: $(playerRow).find('.country').attr('hh_title'),
+                    flag: flag,
                     points: $(playerRow[4]).text().match(/\d+/g).join('')
                 })
             }
@@ -2337,12 +2346,77 @@
         }
     }
 
+    class CopyContests extends HHModule {
+        constructor () {
+            const baseKey = 'CopyContests'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `Copy Contests`
+            }
+            super({name: baseKey, configSchema})
+        }
+
+        shouldRun () {
+            return currentPage.includes('activities')
+        }
+
+        run () {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            HHPlusPlus.Helpers.defer(() => {
+                $(".ranking.over_panel .closed").each(function (index) {
+                    $(this).attr('hh_title','Copy Contest')
+
+                    $(this).click(() => {
+                        const contest_num = $(".ranking.over_panel").eq(index).attr('id_contest')
+                        const table = $(".leadTable")[index];
+                        const contest_id = parseInt($(`.contest[id_contest="${contest_num}"] .contest_header`).eq(0).css('background-image').match(/\d+/g).at(-1))
+                        let contest_data = '';
+
+                        for(let i=0;i<table.childElementCount;i++){
+                            const row = table.children[i]
+                            let flag = row.children[1].children[0].getAttribute("hh_title")
+                            const translation = flag_fr.indexOf(flag)
+                            if (translation > -1) {
+                                flag = flag_en[translation]
+                            }
+
+                            if (contest_id < 16) {
+                                contest_data += `${contest_id}\t${i+1}\t`
+                            }
+                            contest_data+=flag+"\t";
+                            contest_data+=row.getAttribute("sorting_id")+"\t";
+                            contest_data+=row.children[1].innerText.slice(1).replace(/\n|\t/g,'')+"\t";
+                            contest_data+=row.children[2].innerText.match(/\d+/g).join('')+"\n";
+                        }
+                        copyText(contest_data)
+                    })
+                })
+
+                sheet.insertRule(`
+                #contests>div>div.right_part>.ranking>h5 {
+                    width: 220px;
+                    top: -10px;
+                }
+                `)
+                sheet.insertRule(`
+                .ranking .closed {
+                    cursor: pointer;
+                }`)
+            })
+
+            this.hasRun = true
+        }
+    }
+
     const allModules = [
         new DailyMissionsRestyle(),
         new GirlDataRecord(),
         new LeagueDataCollector(),
         new ImprovedWaifu(),
-        new PachinkoLog()
+        new PachinkoLog(),
+        new CopyContests()
     ]
 
     setTimeout(() => {
