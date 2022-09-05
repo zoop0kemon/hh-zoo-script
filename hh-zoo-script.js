@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.4.0
+// @version         0.4.1
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.4.1: Mostly fixed title overflow for Daily Mission Restyle, and adjusted Copy Contest display and style.
 // 0.4.0: Added Copy Contests. Copying flag info is now translated to English.
 // 0.3.10: Changed pachinko log rest icon, and fixed great game girl chance display
 // 0.3.9: Fixed Girl Data Record, due to missing global unable to record pose info
@@ -342,11 +343,29 @@
             this.insertRule(`
                 #missions>div .missions_wrap .mission_object .mission_details h1 {
                     position: absolute;
-                    top: -4px;
-                    left: 4px;
-                    width: 100%;
+                    top: -3px;
+                    left: 5%;
+                    width: 90%;
                     text-align: center;
                     font-size: 13px!important;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                }
+            `)
+            this.insertRule(`
+                #missions>div .missions_wrap .mission_object.legendary .mission_details h1:hover {
+                    top: -7px;
+                    text-overflow: clip;
+                    overflow: visable;
+                    white-space: unset;
+                    background-color: rgba(8, 8, 8, 0.75);
+                    padding: 0px 6px;
+                    border-radius: 4px;
+                    border-width: 4px;
+                    border-style: solid;
+                    border-color: rgba(204, 204, 204, 0.25);
+
                 }
             `)
             this.insertRule(`
@@ -428,9 +447,9 @@
                 #missions>div .missions_wrap .mission_object .mission_button>button[rel=finish] {
                     position: relative;
                     display: block;
-                    padding: 4px 0px;
+                    padding: 0px 0px;
                     width: 90px;
-                    height: 20px;
+                    height: 25px;
                     top: 22px;
                     left: 2px;
                     line-height: 12px;
@@ -2367,6 +2386,7 @@
             HHPlusPlus.Helpers.defer(() => {
                 $(".ranking.over_panel .closed").each(function (index) {
                     $(this).attr('hh_title','Copy Contest')
+                    $(this).append('<img src="https://hh.hh-content.com/design/ic_books_gray.svg">')
 
                     $(this).click(() => {
                         const contest_num = $(".ranking.over_panel").eq(index).attr('id_contest')
@@ -2395,9 +2415,11 @@
                 })
 
                 sheet.insertRule(`
-                #contests>div>div.right_part>.ranking>h5 {
-                    width: 220px;
-                    top: -10px;
+                #contests>div>div.right_part .closed>img {
+                    width: 20px;
+                    height: 28px;
+                    margin-top: 0px;
+                    margin-left: 10px;
                 }
                 `)
                 sheet.insertRule(`
