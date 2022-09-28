@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.4.1
+// @version         0.4.2
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.4.2: League Data Collector will now note any banned players found in a league.
 // 0.4.1: Mostly fixed title overflow for Daily Mission Restyle, and adjusted Copy Contest display and style.
 // 0.4.0: Added Copy Contests. Copying flag info is now translated to English.
 // 0.3.10: Changed pachinko log rest icon, and fixed great game girl chance display
@@ -204,8 +205,8 @@
         return style.sheet;
     })();
 
-    function lsGet(key,config=LS_CONFIG_NAME) {
-        return JSON.parse(localStorage.getItem(`${config}${key}`))
+    function lsGet(key, ls_name=LS_CONFIG_NAME) {
+        return JSON.parse(localStorage.getItem(`${ls_name}${key}`))
     }
     function lsSet(key, value) {
         return localStorage.setItem(`${LS_CONFIG_NAME}${key}`, JSON.stringify(value))
@@ -1031,11 +1032,16 @@
         copyData (week) {
             const leagueData = lsGet(`${week}LeagueRecord`)
             const simHist = lsGet(`${week}SimHistory`)
-            const pointHist = lsGet(`LeaguePointHistory${week}`,'HHPlusPlus')
+            const pointHist = lsGet(`LeaguePointHistory${week}`, 'HHPlusPlus')
+            const leagueResults = lsGet(`LeagueResults${week}`, 'HHPlusPlus')
             const extra = simHist ? true : false
-            let text = leagueData ? `${new Date(leagueData.date).toUTCString()}\n` : 'No Data Found';
-            let prow = '';
-            if (leagueData) { // copy for this week
+            let prow = ''
+
+            let banned = []
+            Object.entries(leagueResults).forEach(([id])=>{if(!leagueData.playerList.some(e=>e.id==id)){banned.push(id)}});
+
+            let text = leagueData ? `${new Date(leagueData.date).toUTCString()}${banned.length>0 ? '\tBanned: ' : ''}${banned.join(', ')}\n` : 'No Data Found';
+            if (leagueData) {
                 leagueData.playerList.forEach((player) => {
                     let row = Object.values(player).join('\t')
                     if (extra) {
