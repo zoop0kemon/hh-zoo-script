@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.4.2
+// @version         0.4.3
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.4.3: Better tracking of banned players.
 // 0.4.2: League Data Collector will now note any banned players found in a league.
 // 0.4.1: Mostly fixed title overflow for Daily Mission Restyle, and adjusted Copy Contest display and style.
 // 0.4.0: Added Copy Contests. Copying flag info is now translated to English.
@@ -1004,7 +1005,19 @@
         }
 
         recordData () {
-            let leagueData = {date: new Date(), playerList: []}
+            const oldLeagueData = lsGet('LeagueRecord')
+            let leagueData = {date: new Date(), playerList: [], banned: []}
+
+            if (oldLeagueData) {
+                let banned = oldLeagueData.banned || []
+                const leagueResults = lsGet('LeagueResults', 'HHPlusPlus')
+                if (leagueResults) {
+                    Object.entries(leagueResults).forEach(([id])=>{if(!oldLeagueData.playerList.some(e=>e.id==id)){banned.push(id)}});
+                }
+                oldLeagueData.playerList.forEach(({id})=>{if(!leagues_list.some(e=>e.id_player==id)){banned.push(id)}});
+                leagueData.banned = [... new Set(banned)]
+            }
+
 
             for (let i=0;i<leagues_list.length;i++) {
                 const playerRow = $(leagues_list[i].html.replaceAll('\t','').replaceAll('\n',''))
@@ -1022,25 +1035,19 @@
                     points: $(playerRow[4]).text().match(/\d+/g).join('')
                 })
             }
-
-            // make sure data is sorted
             leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1);
 
-            lsSet('LeagueRecord',leagueData)
+            lsSet('LeagueRecord', leagueData)
         }
 
         copyData (week) {
             const leagueData = lsGet(`${week}LeagueRecord`)
             const simHist = lsGet(`${week}SimHistory`)
             const pointHist = lsGet(`LeaguePointHistory${week}`, 'HHPlusPlus')
-            const leagueResults = lsGet(`LeagueResults${week}`, 'HHPlusPlus')
             const extra = simHist ? true : false
             let prow = ''
 
-            let banned = []
-            Object.entries(leagueResults).forEach(([id])=>{if(!leagueData.playerList.some(e=>e.id==id)){banned.push(id)}});
-
-            let text = leagueData ? `${new Date(leagueData.date).toUTCString()}${banned.length>0 ? '\tBanned: ' : ''}${banned.join(', ')}\n` : 'No Data Found';
+            let text = leagueData ? `${new Date(leagueData.date).toUTCString()}${leagueData.banned.length>0 ? '\tBanned: ' : ''}${leagueData.banned.join(', ')}\n` : 'No Data Found';
             if (leagueData) {
                 leagueData.playerList.forEach((player) => {
                     let row = Object.values(player).join('\t')
@@ -1080,6 +1087,7 @@
                     lsSet('LeagueEnd', leagueEndTime)
                 } else if (leagueEndTime > storedEndTime) {
                     lsSet('OldLeagueRecord',lsGet('LeagueRecord'))
+                    lsRm('LeagueRecord')
                     lsSet('LeagueEnd', leagueEndTime)
                 }
 
