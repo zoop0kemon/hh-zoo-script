@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.4.3
+// @version         0.4.4
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.4.4: Fixed pachinko log
 // 0.4.3: Better tracking of banned players.
 // 0.4.2: League Data Collector will now note any banned players found in a league.
 // 0.4.1: Mostly fixed title overflow for Daily Mission Restyle, and adjusted Copy Contest display and style.
@@ -1709,7 +1710,7 @@
                 let isTotal = item.length == 1 && item != 'g'
 
                 let count = summary[cat]? summary[cat][isTotal? 'total' : item] || 0 : 0
-                let pct = (100*count/(summary.total * (cat!='gems'? type == 'great'? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
+                let pct = (100*count/(summary.total * (cat!='gems'? type == 'great' || type == 'event' ? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
 
                 return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}hh_title="${count}">${pct}%<span>`)
             }
@@ -2345,17 +2346,20 @@
                     }
                     rewards.rewards.forEach((reward) => {
                         if (reward.type.includes('item') || reward.type == 'armor') {
-                            const items = $(reward.value.replace(/^\n/,''))
-                            const item = items.find('img:not(.stats_icon)')[0].src.match(/items\/(.+)\.png/)[1]
-                            const rarity = items.attr('rarity')[0].toUpperCase()
+                            const items = reward.value.item
+                            const rarity = items.rarity[0].toUpperCase()
 
                             if (reward.type.includes('item')) {
-                                const count = Math.max(1,items.find('.value_reward')[0].innerText)
+                                const item = items.identifier
+                                const count = reward.value.quantity
+
                                 for (let i=0;i<count;i++) {
                                     roll.push(item+rarity)
                                 }
                             } else {
-                                roll.push(item+rarity+JSON.parse(items.attr('data-d')).name_add)
+                                const item = reward.value.skin.identifier
+
+                                roll.push(item+rarity+items.name_add)
                             }
                         } else if (reward.type == 'frames') {
                             roll.push(`F${$(reward.value).text()}`)
