@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.0
+// @version         0.5.1
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.1: Uncovered Restock button
 // 0.5.0: Added some temporary Market/Harem Style Tweaks
 // 0.4.4: Fixed pachinko log
 // 0.4.3: Better tracking of banned players.
@@ -2517,6 +2518,7 @@
                         position: absolute;
                         top: -4rem;
                         right: 20rem;
+                        width: auto!important;
                     }`)
 
                     sheet.insertRule(`
