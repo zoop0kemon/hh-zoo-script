@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.4.4
+// @version         0.5.0
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.0: Added some temporary Market/Harem Style Tweaks
 // 0.4.4: Fixed pachinko log
 // 0.4.3: Better tracking of banned players.
 // 0.4.2: League Data Collector will now note any banned players found in a league.
@@ -2450,13 +2451,225 @@
         }
     }
 
+    class MarketHaremTweaks extends HHModule {
+        constructor () {
+            const baseKey = 'MarketHaremTweaks'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `Temp Market/Harem Style Tweaks`
+            }
+            super({name: baseKey, configSchema})
+        }
+
+        shouldRun () {
+            return currentPage.includes('shop') || currentPage.includes('harem') && !currentPage.includes('hero') || currentPage.includes('girl')
+        }
+
+        run () {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            $(document).ready(() => {
+                if (currentPage.includes('shop')) {
+                    const fill_slots_market = () => {
+                        $('.player-inventory-content, .my-inventory-container .booster').each(function () {
+                            const slots= $(this).find('.slot-container').length
+                            const slots_filled = slots - $(this).find('.slot-container.empty').length
+                            const empty_fill = Math.max(16, Math.ceil(slots_filled/4)*4) - slots_filled
+                            //console.log(`slots: ${slots}, filled: ${slots_filled}, empty: ${empty_fill}`)
+
+                            if (slots%4 != 0 || slots < 16) {
+                                //console.log('Filled')
+                                $(this).find('.slot-container.empty').remove()
+                                $(this).append('<div class="slot-container empty"><div class="slot empty"></div></div>'.repeat(empty_fill))
+                            }
+                        })
+                    }
+
+                    fill_slots_market()
+                    const observer = new MutationObserver(() => {
+                        fill_slots_market()
+                    })
+                    observer.observe($('.player-inventory-content')[0], {childList: true})
+                    observer.observe($('.my-inventory-container .booster')[0], {childList: true})
+
+                    sheet.insertRule(`
+                    .right-container .player-inventory-content {
+                        width: 27rem!important;
+                        height: 24.5rem!important;
+                        align-content: flex-start;
+                    }`)
+                    sheet.insertRule(`
+                    .player-inventory-content .nicescroll-rails {
+                        right: 15px!important;
+                    }`)
+                    sheet.insertRule(`
+                    .merchant-inventory-container {
+                        margin-top: 6rem;
+                    }`)
+                    sheet.insertRule(`
+                    .left-container .bottom-container {
+                        position: absolute;
+                        top: 7rem;
+                    }`)
+                    sheet.insertRule(`
+                    .right-container .bottom-container {
+                        position: absolute;
+                        top: -4rem;
+                        right: 20rem;
+                    }`)
+
+                    sheet.insertRule(`
+                    .my-inventory {
+                        width: 30rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    .equiped-items {
+                        width: 18rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    .market-girl-container, .hero-img, .equiped-booster-text {
+                        display: none;
+                    }`)
+                    sheet.insertRule(`
+                    .armor-container, .booster-container {
+                        width: 12rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    .booster-container .booster {
+                        flex-direction: column;
+                        margin-right: unset!important;
+                        margin-left: 1.5rem!important;
+                        margin-top: 1rem!important;
+                        width: 10rem!important;
+                        height: 12rem;
+                    }`)
+                    sheet.insertRule(`
+                    .booster-container .booster .slot {
+                        margin-bottom: unset!important;
+                    }`)
+                    sheet.insertRule(`
+                    .my-inventory .bottom-container {
+                        position: absolute;
+                        display: block!important;
+                        left: 45.75rem!important;
+                        bottom: 4.5rem!important;
+                        z-index: 100;
+                    }`)
+                    sheet.insertRule(`
+                    .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .armor, .my-hero-switch-content .my-inventory-container .booster {
+                        width: 24rem!important;
+                        height: 22rem!important;
+                        justify-content: unset!important;
+                        align-content: flex-start;
+                    }`)
+                    sheet.insertRule(`
+                    .armor-container .armor {
+                        display: flex;
+                        flex-wrap: wrap;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        height: 12rem;
+                        width: 10rem;
+                        margin-left: 1.5rem;
+                        margin-top: 1rem;
+                    }`)
+                    sheet.insertRule(`
+                    .armor-container .armor .slot-container {
+                        position: unset!important;
+                        width: 60px!important;
+                        height: 60px!important;
+                    }`)
+                    sheet.insertRule(`
+                    .armor-container .armor .slot {
+                        width: 60px!important;
+                        height: 60px!important;
+                    }`)
+                    sheet.insertRule(`
+                    .equiped-items .slot.potential::after, .equiped-items .slot.selected::after, .equiped-items .slot.using::after {
+                        width: 66px!important;
+                        height: 66px!important;
+                        top: -4px!important;
+                        left: -4px!important;
+                    }`)
+                    sheet.insertRule(`
+                     #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-boosters-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .booster .nicescroll-rails, #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-equipement-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .armor .nicescroll-rails {
+                        right: 26rem!important;
+                    }`)
+                } else if (currentPage.includes('harem') && !currentPage.includes('hero')) {
+                    sheet.insertRule(`
+                    #harem_left div.girls_list.grid_view div[girl]>.left>.icon span {
+                        margin-right: -24px;
+                    }`)
+                    sheet.insertRule(`
+                    #harem_left div.girls_list.grid_view div[girl].opened>.right>.g_infos>.lvl {
+                        top: -3px!important;
+                    }`)
+                } else if (currentPage.includes('girl')) {/*
+                    $('.total-from-items span').each(function () {
+                        $(this).text(parseInt($(this).text()).toLocaleString())
+                    })
+                    const total_observer = new MutationObserver(() => {
+                        $('.total-from-items span').each(function () {
+                            $(this).text(parseInt($(this).text()).toLocaleString())
+                        })
+                    })
+                    total_observer.observe($('.total-from-items')[0], {subtree: true, characterData: true})*/
+
+                    const fill_slots_girl = () => {
+                        $(".inventory").each(function () {
+                            const empty_fill = 20 - $(this).find('.inventory-slot').length
+                            if (empty_fill > 0) {
+                                $(this).append('<div class="inventory-slot empty-slot"><div class="slot"></div></div>'.repeat(empty_fill))
+                            }
+                        })
+                    }
+
+                    fill_slots_girl()
+                    const slot_observer = new MutationObserver(() => {
+                        if ($('.inventory-slot').length < 40) {
+                            fill_slots_girl()
+                        }
+                    })
+                    slot_observer.observe($('.inventory')[0], {childList: true})
+
+                    sheet.insertRule(`
+                    div#tabs_switcher {
+                        padding: 0.25rem;
+                    }`)
+                    sheet.insertRule(`
+                    .girl-leveler-panel .girl-leveler-container .inventory-section .switch-tab-content .total-from-items {
+                        margin-top: 0.5rem;
+                    }`)
+                    sheet.insertRule(`
+                    .girl-leveler-panel .girl-leveler-container .inventory-section .switch-tab-content .total-from-items p {
+                        margin-top: 0.25rem;
+                        margin-bottom: 0.25rem;
+                    }`)
+                    sheet.insertRule(`
+                    .inventory {
+                        grid-auto-flow: column;
+                        grid-template-rows: auto auto auto auto;
+                        height: 22.5rem;
+                        gap: 0.5rem 1.5rem;
+                        padding-top: 0.5rem;
+                        justify-content: start;
+                    }`)
+                }
+            })
+
+            this.hasRun = true
+        }
+    }
+
     const allModules = [
         new DailyMissionsRestyle(),
         new GirlDataRecord(),
         new LeagueDataCollector(),
         new ImprovedWaifu(),
         new PachinkoLog(),
-        new CopyContests()
+        new CopyContests(),
+        new MarketHaremTweaks()
     ]
 
     setTimeout(() => {
