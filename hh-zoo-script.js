@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.1
+// @version         0.5.2
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.2: Fixed market style conflicts with HH++ update and better Improved Waifu loading
 // 0.5.1: Uncovered Restock button
 // 0.5.0: Added some temporary Market/Harem Style Tweaks
 // 0.4.4: Fixed pachinko log
@@ -1209,9 +1210,9 @@
                     lsSet('WaifuInfo', waifuInfo)
                     const girlDict = HHPlusPlus.Helpers.getGirlDictionary()
                     let dictGirl = girlDict.get(girl_id)
-                    if (!dictGirl) {console.log("Missing max grade info"); return}
+                    if (!dictGirl) {console.log("Improved Waifu WARNING: Missing max grade info, please visit the harem page."); return}
                     let girlInfo = waifuInfo.girls[girl_id]
-                    if (!girlInfo) {console.log("Missing unlocked grade info"); return}
+                    if (!girlInfo) {console.log("Improved Waifu WARNING: Missing unlocked grade info, please visit the harem page."); return}
                     let unlocked_grade = girlInfo.unlocked
                     let max_grade = dictGirl.grade || unlocked_grade
                     let selected_grade = girlInfo.grade === undefined ? Math.min(waifu.selected_grade, max_grade, unlocked_grade) : girlInfo.grade
@@ -1232,9 +1233,21 @@
                         }
                     }
 
-                    let waifu_image = $('.waifu-container>img').eq(0)
-                    if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
-                        waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
+                    const setup_waifu_image = () => {
+                        if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
+                            $('.waifu-container>img').eq(0).attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
+                        }
+                    }
+                    if ($('.waifu-container>img').length) {
+                        setup_waifu_image()
+                    }  else {
+                        const observer = new MutationObserver(() => {
+                            if ($('.waifu-container>img').length) {
+                                setup_waifu_image()
+                                observer.disconnect()
+                            }
+                        })
+                        observer.observe($('.waifu-container')[0], {childList: true})
                     }
 
                     $('.waifu-buttons-container a').remove()
@@ -1261,18 +1274,31 @@
                     let $waifu_right = $('<div class="waifu-right"></div>').append($fav_girl, $waifu_mode, $random_waifu, $cycle_waifu)
                     waifu_buttons.append($waifu_right)
 
-                    if (display == 0) {
-                        waifu_image.toggleClass('hide')
-                        $('.diamond-bar').eq(0).toggleClass('hide')
-                        $('.waifu-edit').eq(0).toggleClass('hide')
-                        $('.waifu-right').eq(0).toggleClass('hide')
-                        $eye[0].children[0].src = `https://${cdnHost}/quest/ic_eyeopen.svg`
+                    const if_hidden = () => {
+                        if (display == 0) {
+                            $('.waifu-container>img').eq(0).toggleClass('hide')
+                            $('.diamond-bar').eq(0).toggleClass('hide')
+                            $('.waifu-edit').eq(0).toggleClass('hide')
+                            $('.waifu-right').eq(0).toggleClass('hide')
+                            $eye[0].children[0].src = `https://${cdnHost}/quest/ic_eyeopen.svg`
+                        }
+                    }
+                    if ($('.waifu-container>img').length) {
+                        if_hidden()
+                    } else {
+                        const observer = new MutationObserver(() => {
+                            if ($('.waifu-container>img').length) {
+                                if_hidden()
+                                observer.disconnect()
+                            }
+                        })
+                        observer.observe($('.waifu-container')[0], {childList: true})
                     }
 
                     // buttons
                     $eye.prop("onclick", null).off("click");
                     $eye.click(function() {
-                        waifu_image.toggleClass('hide')
+                        $('.waifu-container>img').eq(0).toggleClass('hide')
                         $('.diamond-bar').eq(0).toggleClass('hide')
                         $('.waifu-edit').eq(0).toggleClass('hide')
                         $('.waifu-right').eq(0).toggleClass('hide')
@@ -1288,7 +1314,6 @@
                     })
 
                     // waifu-edit
-                    const size = {width: waifu_image.width()/2, height: waifu_image.height()/2}
                     let editing = false, panning = false;
                     let scale, x, y
                     try {scale = girlInfo.pose[selected_grade].scale || 1} catch {scale = 1}
@@ -1321,52 +1346,69 @@
                     })
 
                     $reset_pose.click(function () {
-                        waifu_image.css('transform','')
+                        $('.waifu-container>img').eq(0).css('transform','')
                         cord = {x:0, y:0}
                         start = {x:0, y:0}
                         scale = 1;
                     })
 
                     function setTransform() {
-                        waifu_image.css('transform',`translate(${Math.round(cord.x)}px, ${Math.round(cord.y)}px) scale(${scale})`);
+                        $('.waifu-container>img').eq(0).css('transform',`translate(${Math.round(cord.x)}px, ${Math.round(cord.y)}px) scale(${scale})`);
                     }
-                    setTransform();
 
-                    waifu_image.mousedown(function (e) {
-                        if (!editing) {return;}
-                        e.preventDefault();
-                        start = {x: e.clientX-cord.x, y: e.clientY-cord.y}
-                        panning = true;
-                    })
-                    waifu_image.mouseup(function (e) {
-                        if (!editing) {return}
-                        e.preventDefault();
-                        panning = false;
-                    })
-                    waifu_image.mouseleave(function (e) {
-                        if (!editing) {return}
-                        panning = false;
-                    })
-                    waifu_image.mousemove(function (e) {
-                        if(!panning||!editing) {return}
-                        cord = {x: e.clientX - start.x, y: e.clientY-start.y}
+                    const setup_waifu_image_edit = () => {
+                        let waifu_image = $('.waifu-container>img').eq(0)
+                        const size = {width: waifu_image.width()/2, height: waifu_image.height()/2}
+
                         setTransform();
-                    })
-                    waifu_image.bind('mousewheel', function (e) {
-                        if (!editing) {return}
-                        e.preventDefault();
-                        const offset = waifu_image.offset(), old_scale = scale
-                        const point = {x: e.clientX-offset.left, y: e.clientY-offset.top}
-                        if(e.originalEvent.deltaY < 0) {
-                            scale += 0.1;
-                        } else {
-                            scale = Math.max(scale-0.05, 0.1);
-                        }
-                        // translation needs improvment
-                        cord = {x: cord.x-(scale/old_scale-1)*(point.x-size.width*old_scale),
-                                y: cord.y-(scale/old_scale-1)*(point.y-size.height*old_scale)}
-                        setTransform();
-                    })
+
+                        waifu_image.mousedown(function (e) {
+                            if (!editing) {return;}
+                            e.preventDefault();
+                            start = {x: e.clientX-cord.x, y: e.clientY-cord.y}
+                            panning = true;
+                        })
+                        waifu_image.mouseup(function (e) {
+                            if (!editing) {return}
+                            e.preventDefault();
+                            panning = false;
+                        })
+                        waifu_image.mouseleave(function (e) {
+                            if (!editing) {return}
+                            panning = false;
+                        })
+                        waifu_image.mousemove(function (e) {
+                            if(!panning||!editing) {return}
+                            cord = {x: e.clientX - start.x, y: e.clientY-start.y}
+                            setTransform();
+                        })
+                        waifu_image.bind('mousewheel', function (e) {
+                            if (!editing) {return}
+                            e.preventDefault();
+                            const offset = waifu_image.offset(), old_scale = scale
+                            const point = {x: e.clientX-offset.left, y: e.clientY-offset.top}
+                            if(e.originalEvent.deltaY < 0) {
+                                scale += 0.1;
+                            } else {
+                                scale = Math.max(scale-0.05, 0.1);
+                            }
+                            // translation needs improvment
+                            cord = {x: cord.x-(scale/old_scale-1)*(point.x-size.width*old_scale),
+                                    y: cord.y-(scale/old_scale-1)*(point.y-size.height*old_scale)}
+                            setTransform();
+                        })
+                    }
+                    if ($('.waifu-container>img').length) {
+                        setup_waifu_image_edit()
+                    } else {
+                        const observer = new MutationObserver(() => {
+                            if ($('.waifu-container>img').length) {
+                                setup_waifu_image_edit()
+                                observer.disconnect()
+                            }
+                        })
+                        observer.observe($('.waifu-container')[0], {childList: true})
+                    }
 
                     $('.diamond').each(function (index) {
                         $(this).click(() => {
@@ -1378,7 +1420,7 @@
                                 $('.diamond.unlocked').eq(selected_grade).removeClass('selected')
                                 $(this).addClass('selected')
                                 selected_grade = index
-                                waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${index}.png`)
+                                $('.waifu-container>img').eq(0).attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${index}.png`)
                                 start = {x:0, y:0}
                                 try {scale = girlInfo.pose[selected_grade].scale || 1} catch {scale = 1}
                                 try {x = girlInfo.pose[selected_grade].x || 0} catch {x = 0}
@@ -1441,9 +1483,9 @@
                         }
                         girl_id = temp_id
                         dictGirl = girlDict.get(girl_id)
-                        if (!dictGirl) {console.log("Missing max grade info"); return}
+                        if (!dictGirl) {console.log("Improved Waifu WARNING: Missing max grade info, please visit the harem page."); return}
                         girlInfo = waifuInfo.girls[girl_id]
-                        if (!girlInfo) {console.log("Missing unlocked grade info"); return}
+                        if (!girlInfo) {console.log("Improved Waifu WARNING: Missing unlocked grade info, please visit the harem page."); return}
                         unlocked_grade = girlInfo.unlocked
                         max_grade = dictGirl.grade || unlocked_grade
                         selected_grade = girlInfo.grade === undefined ? Math.min(max_grade, unlocked_grade) : girlInfo.grade
@@ -1454,7 +1496,7 @@
                         try {y = girlInfo.pose[selected_grade].y || 0} catch {y = 0}
                         cord = {x: x, y: y}
 
-                        waifu_image.attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
+                        $('.waifu-container>img').eq(0).attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
                         setTransform();
                         $('.girls-name a').eq(0).text(dictGirl.name)
                         $('.diamond').each(function (index) {
@@ -2475,14 +2517,16 @@
                     const fill_slots_market = () => {
                         $('.player-inventory-content, .my-inventory-container .booster').each(function () {
                             const slots= $(this).find('.slot-container').length
-                            const slots_filled = slots - $(this).find('.slot-container.empty').length
-                            const empty_fill = Math.max(16, Math.ceil(slots_filled/4)*4) - slots_filled
-                            //console.log(`slots: ${slots}, filled: ${slots_filled}, empty: ${empty_fill}`)
+                            const slots_empty = $(this).find('.slot-container.empty').length
+                            const slots_filled = slots - slots_empty
+                            const empty_pad = Math.max(16, Math.ceil(slots_filled/4)*4) - slots_filled
+                            //console.log(`slots: ${slots}, filled: ${slots_filled}, empty: ${slots_empty}, padding: ${empty_pad}`)
 
-                            if (slots%4 != 0 || slots < 16) {
+                            if (empty_pad != slots_empty) {
                                 //console.log('Filled')
+                                //console.log(`slots: ${slots}, filled: ${slots_filled}, empty: ${slots_empty}, padding: ${empty_pad}`)
                                 $(this).find('.slot-container.empty').remove()
-                                $(this).append('<div class="slot-container empty"><div class="slot empty"></div></div>'.repeat(empty_fill))
+                                $(this).append('<div class="slot-container empty"><div class="slot empty"></div></div>'.repeat(empty_pad))
                             }
                         })
                     }
@@ -2492,6 +2536,7 @@
                         fill_slots_market()
                     })
                     observer.observe($('.player-inventory-content')[0], {childList: true})
+                    observer.observe($('.player-inventory-content')[1], {childList: true})
                     observer.observe($('.my-inventory-container .booster')[0], {childList: true})
 
                     sheet.insertRule(`
@@ -2499,6 +2544,10 @@
                         width: 27rem!important;
                         height: 24.5rem!important;
                         align-content: flex-start;
+                    }`)
+                    sheet.insertRule(`
+                    .right-container .player-inventory-content.armor {
+                        height: 24rem!important;
                     }`)
                     sheet.insertRule(`
                     .player-inventory-content .nicescroll-rails {
@@ -2517,17 +2566,17 @@
                     .right-container .bottom-container {
                         position: absolute;
                         top: -4rem;
-                        right: 20rem;
+                        left: 36.75rem;
                         width: auto!important;
                     }`)
 
                     sheet.insertRule(`
                     .my-inventory {
-                        width: 30rem!important;
+                        width: 29rem!important;
                     }`)
                     sheet.insertRule(`
                     .equiped-items {
-                        width: 18rem!important;
+                        width: 14rem!important;
                     }`)
                     sheet.insertRule(`
                     .market-girl-container, .hero-img, .equiped-booster-text {
@@ -2552,18 +2601,30 @@
                     }`)
                     sheet.insertRule(`
                     .my-inventory .bottom-container {
-                        position: absolute;
-                        display: block!important;
-                        left: 45.75rem!important;
-                        bottom: 4.5rem!important;
+                        position: absolute;;
                         z-index: 100;
+                        display: block!important;
+                        left: 46.625rem!important;
+                        bottom: 4.5rem!important;
                     }`)
                     sheet.insertRule(`
                     .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .armor, .my-hero-switch-content .my-inventory-container .booster {
-                        width: 24rem!important;
-                        height: 22rem!important;
-                        justify-content: unset!important;
                         align-content: flex-start;
+                        width: 24rem!important;
+                        justify-content: unset!important;
+                        margin-left: 1.5rem;
+                    }`)
+                    sheet.insertRule(`
+                    .my-hero-switch-content .my-inventory-container .armor {
+                        margin-left: 3.5rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .booster {
+                        height: 22rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    .my-hero-switch-content .my-inventory-container .armor {
+                        height: 21.5rem!important;
                     }`)
                     sheet.insertRule(`
                     .armor-container .armor {
@@ -2595,8 +2656,54 @@
                         left: -4px!important;
                     }`)
                     sheet.insertRule(`
-                     #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-boosters-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .booster .nicescroll-rails, #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-equipement-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .armor .nicescroll-rails {
-                        right: 26rem!important;
+                     #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-boosters-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .booster .nicescroll-rails {
+                        right: 22.5rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-equipement-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .armor .nicescroll-rails {
+                        right: 21rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    #shops .left-container .top-container {
+                        width: 17.5rem!important;
+                    }`)
+
+                    //css rules for HH++ equip filter
+                    sheet.insertRule(`
+                     .equip_filter_box {
+                       width: 5rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    .grid-selector {
+                        margin-bottom: 4px!important;
+                        flex-direction: column;
+                    }`)
+                    sheet.insertRule(`
+                     .grid-selector .clear-selector img, .grid-selector .selector-options div, .grid-selector .selector-options img {
+                        height: 24px!important;
+                        width: 24px!important;
+                    }`)
+                    sheet.insertRule(`
+                    #my-hero-equipement-tab-container label.equip_filter {
+                        top: 6rem!important;
+                        left: 17rem!important;
+                        z-index: 4;
+                    }`)
+                    sheet.insertRule(`
+                    #my-hero-equipement-tab-container .equip_filter_box.form-wrapper {
+                        top: 6.5rem!important;
+                        left: 13rem!important;
+                    }`)
+                    sheet.insertRule(`
+                    #equipement-tab-container .right-container label.equip_filter {
+                        top: 6.5rem!important;
+                        right: 27.5rem!important;
+                        z-index: 4;
+                    }`)
+                    sheet.insertRule(`
+                    #equipement-tab-container .equip_filter_box.form-wrapper {
+                        top: 7rem!important;
+                        left: 30.5rem!important;
                     }`)
                 } else if (currentPage.includes('harem') && !currentPage.includes('hero')) {
                     sheet.insertRule(`
