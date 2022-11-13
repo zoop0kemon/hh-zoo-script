@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.2
+// @version         0.5.3
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
 // @match           https://*.comixharem.com/*
 // @match           https://*.hornyheroes.com/*
 // @match           https://*.pornstarharem.com/*
+// @match           https://*.mangarpg.com/*
 // @run-at          document-body
 // @updateURL       https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
 // @downloadURL     https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
@@ -18,6 +19,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.3: Split Market/Harem style tweaks
 // 0.5.2: Fixed market style conflicts with HH++ update and better Improved Waifu loading
 // 0.5.1: Uncovered Restock button
 // 0.5.0: Added some temporary Market/Harem Style Tweaks
@@ -2494,218 +2496,249 @@
         }
     }
 
-    class MarketHaremTweaks extends HHModule {
+    class MarketTweaks extends HHModule {
         constructor () {
-            const baseKey = 'MarketHaremTweaks'
+            const baseKey = 'MarketTweaks'
             const configSchema = {
                 baseKey,
                 default: true,
-                label: `Temp Market/Harem Style Tweaks`
+                label: `Compact Market`
             }
             super({name: baseKey, configSchema})
         }
 
         shouldRun () {
-            return currentPage.includes('shop') || currentPage.includes('harem') && !currentPage.includes('hero') || currentPage.includes('girl')
+            return currentPage.includes('shop')
         }
 
         run () {
             if (this.hasRun || !this.shouldRun()) {return}
 
             $(document).ready(() => {
-                if (currentPage.includes('shop')) {
-                    const fill_slots_market = () => {
-                        $('.player-inventory-content, .my-inventory-container .booster').each(function () {
-                            const slots= $(this).find('.slot-container').length
-                            const slots_empty = $(this).find('.slot-container.empty').length
-                            const slots_filled = slots - slots_empty
-                            const empty_pad = Math.max(16, Math.ceil(slots_filled/4)*4) - slots_filled
-                            //console.log(`slots: ${slots}, filled: ${slots_filled}, empty: ${slots_empty}, padding: ${empty_pad}`)
+                const config = lsGet('Config', 'HHPlusPlus') || {'st_expandedMarketInventory': false}
+                if (config.st_expandedMarketInventory) {
+                    console.log("Zoo's Scripts (Compact Market) WARNING: Disable this or Style Tweaks' \"Expanded Market inventory\" module")
+                }
 
-                            if (empty_pad != slots_empty) {
-                                //console.log('Filled')
-                                //console.log(`slots: ${slots}, filled: ${slots_filled}, empty: ${slots_empty}, padding: ${empty_pad}`)
-                                $(this).find('.slot-container.empty').remove()
-                                $(this).append('<div class="slot-container empty"><div class="slot empty"></div></div>'.repeat(empty_pad))
-                            }
-                        })
-                    }
+                const fill_slots_market = () => {
+                    $('.player-inventory-content, .my-inventory-container .booster').each(function () {
+                        const slots= $(this).find('.slot-container').length
+                        const slots_empty = $(this).find('.slot-container.empty').length
+                        const slots_filled = slots - slots_empty
+                        const empty_pad = Math.max(16, Math.ceil(slots_filled/4)*4) - slots_filled
 
-                    fill_slots_market()
-                    const observer = new MutationObserver(() => {
-                        fill_slots_market()
+                        if (empty_pad != slots_empty) {
+                            $(this).find('.slot-container.empty').remove()
+                            $(this).append('<div class="slot-container empty"><div class="slot empty"></div></div>'.repeat(empty_pad))
+                        }
                     })
-                    observer.observe($('.player-inventory-content')[0], {childList: true})
-                    observer.observe($('.player-inventory-content')[1], {childList: true})
-                    observer.observe($('.my-inventory-container .booster')[0], {childList: true})
+                }
 
-                    sheet.insertRule(`
-                    .right-container .player-inventory-content {
-                        width: 27rem!important;
-                        height: 24.5rem!important;
-                        align-content: flex-start;
-                    }`)
-                    sheet.insertRule(`
-                    .right-container .player-inventory-content.armor {
-                        height: 24rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .player-inventory-content .nicescroll-rails {
-                        right: 15px!important;
-                    }`)
-                    sheet.insertRule(`
-                    .merchant-inventory-container {
-                        margin-top: 6rem;
-                    }`)
-                    sheet.insertRule(`
-                    .left-container .bottom-container {
-                        position: absolute;
-                        top: 7rem;
-                    }`)
-                    sheet.insertRule(`
-                    .right-container .bottom-container {
-                        position: absolute;
-                        top: -4rem;
-                        left: 36.75rem;
-                        width: auto!important;
-                    }`)
+                fill_slots_market()
+                const observer = new MutationObserver(() => {
+                    fill_slots_market()
+                })
+                observer.observe($('.player-inventory-content')[0], {childList: true})
+                observer.observe($('.player-inventory-content')[1], {childList: true})
+                observer.observe($('.my-inventory-container .booster')[0], {childList: true})
 
-                    sheet.insertRule(`
-                    .my-inventory {
-                        width: 29rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .equiped-items {
-                        width: 14rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .market-girl-container, .hero-img, .equiped-booster-text {
-                        display: none;
-                    }`)
-                    sheet.insertRule(`
-                    .armor-container, .booster-container {
-                        width: 12rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .booster-container .booster {
-                        flex-direction: column;
-                        margin-right: unset!important;
-                        margin-left: 1.5rem!important;
-                        margin-top: 1rem!important;
-                        width: 10rem!important;
-                        height: 12rem;
-                    }`)
-                    sheet.insertRule(`
-                    .booster-container .booster .slot {
-                        margin-bottom: unset!important;
-                    }`)
-                    sheet.insertRule(`
-                    .my-inventory .bottom-container {
-                        position: absolute;;
-                        z-index: 100;
-                        display: block!important;
-                        left: 46.625rem!important;
-                        bottom: 4.5rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .armor, .my-hero-switch-content .my-inventory-container .booster {
-                        align-content: flex-start;
-                        width: 24rem!important;
-                        justify-content: unset!important;
-                        margin-left: 1.5rem;
-                    }`)
-                    sheet.insertRule(`
-                    .my-hero-switch-content .my-inventory-container .armor {
-                        margin-left: 3.5rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .booster {
-                        height: 22rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .my-hero-switch-content .my-inventory-container .armor {
-                        height: 21.5rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .armor-container .armor {
-                        display: flex;
-                        flex-wrap: wrap;
-                        flex-direction: column;
-                        justify-content: space-between;
-                        height: 12rem;
-                        width: 10rem;
-                        margin-left: 1.5rem;
-                        margin-top: 1rem;
-                    }`)
-                    sheet.insertRule(`
-                    .armor-container .armor .slot-container {
-                        position: unset!important;
-                        width: 60px!important;
-                        height: 60px!important;
-                    }`)
-                    sheet.insertRule(`
-                    .armor-container .armor .slot {
-                        width: 60px!important;
-                        height: 60px!important;
-                    }`)
-                    sheet.insertRule(`
-                    .equiped-items .slot.potential::after, .equiped-items .slot.selected::after, .equiped-items .slot.using::after {
-                        width: 66px!important;
-                        height: 66px!important;
-                        top: -4px!important;
-                        left: -4px!important;
-                    }`)
-                    sheet.insertRule(`
-                     #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-boosters-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .booster .nicescroll-rails {
-                        right: 22.5rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-equipement-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .armor .nicescroll-rails {
-                        right: 21rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    #shops .left-container .top-container {
-                        width: 17.5rem!important;
-                    }`)
+                sheet.insertRule(`
+                .right-container .player-inventory-content {
+                    width: 27rem!important;
+                    height: 24.5rem!important;
+                    align-content: flex-start;
+                }`)
+                sheet.insertRule(`
+                .right-container .player-inventory-content.armor {
+                    height: 24rem!important;
+                }`)
+                sheet.insertRule(`
+                .player-inventory-content .nicescroll-rails {
+                    right: 15px!important;
+                }`)
+                sheet.insertRule(`
+                .merchant-inventory-container {
+                    margin-top: 6rem;
+                }`)
+                sheet.insertRule(`
+                .left-container .bottom-container {
+                    position: absolute;
+                    top: 7rem;
+                }`)
+                sheet.insertRule(`
+                .right-container .bottom-container {
+                    position: absolute;
+                    top: -4rem;
+                    left: 36.75rem;
+                    width: auto!important;
+                }`)
 
-                    //css rules for HH++ equip filter
-                    sheet.insertRule(`
-                     .equip_filter_box {
-                       width: 5rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    .grid-selector {
-                        margin-bottom: 4px!important;
-                        flex-direction: column;
-                    }`)
-                    sheet.insertRule(`
-                     .grid-selector .clear-selector img, .grid-selector .selector-options div, .grid-selector .selector-options img {
-                        height: 24px!important;
-                        width: 24px!important;
-                    }`)
-                    sheet.insertRule(`
-                    #my-hero-equipement-tab-container label.equip_filter {
-                        top: 6rem!important;
-                        left: 17rem!important;
-                        z-index: 4;
-                    }`)
-                    sheet.insertRule(`
-                    #my-hero-equipement-tab-container .equip_filter_box.form-wrapper {
-                        top: 6.5rem!important;
-                        left: 13rem!important;
-                    }`)
-                    sheet.insertRule(`
-                    #equipement-tab-container .right-container label.equip_filter {
-                        top: 6.5rem!important;
-                        right: 27.5rem!important;
-                        z-index: 4;
-                    }`)
-                    sheet.insertRule(`
-                    #equipement-tab-container .equip_filter_box.form-wrapper {
-                        top: 7rem!important;
-                        left: 30.5rem!important;
-                    }`)
-                } else if (currentPage.includes('harem') && !currentPage.includes('hero')) {
+                sheet.insertRule(`
+                .my-inventory {
+                    width: 29rem!important;
+                }`)
+                sheet.insertRule(`
+                .equiped-items {
+                    width: 14rem!important;
+                }`)
+                sheet.insertRule(`
+                .market-girl-container, .hero-img, .equiped-booster-text {
+                    display: none;
+                }`)
+                sheet.insertRule(`
+                .armor-container, .booster-container {
+                    width: 12rem!important;
+                }`)
+                sheet.insertRule(`
+                .booster-container .booster {
+                    flex-direction: column;
+                    margin-right: unset!important;
+                    margin-left: 1.5rem!important;
+                    margin-top: 1rem!important;
+                    width: 10rem!important;
+                    height: 12rem;
+                }`)
+                sheet.insertRule(`
+                .booster-container .booster .slot {
+                    margin-bottom: unset!important;
+                }`)
+                sheet.insertRule(`
+                .my-inventory .bottom-container {
+                    position: absolute;;
+                    z-index: 100;
+                    display: block!important;
+                    left: 46.625rem!important;
+                    bottom: 4.5rem!important;
+                }`)
+                sheet.insertRule(`
+                .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .armor, .my-hero-switch-content .my-inventory-container .booster {
+                    align-content: flex-start;
+                    width: 24rem!important;
+                    justify-content: unset!important;
+                    margin-left: 1.5rem;
+                }`)
+                sheet.insertRule(`
+                .my-hero-switch-content .my-inventory-container .armor {
+                    margin-left: 3.5rem!important;
+                }`)
+                sheet.insertRule(`
+                .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .booster {
+                    height: 22rem!important;
+                }`)
+                sheet.insertRule(`
+                .my-hero-switch-content .my-inventory-container .armor {
+                    height: 21.5rem!important;
+                }`)
+                sheet.insertRule(`
+                .armor-container .armor {
+                    display: flex;
+                    flex-wrap: wrap;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    height: 12rem;
+                    width: 10rem;
+                    margin-left: 1.5rem;
+                    margin-top: 1rem;
+                }`)
+                sheet.insertRule(`
+                .armor-container .armor .slot-container {
+                    position: unset!important;
+                    width: 60px!important;
+                    height: 60px!important;
+                }`)
+                sheet.insertRule(`
+                .armor-container .armor .slot {
+                    width: 60px!important;
+                    height: 60px!important;
+                }`)
+                sheet.insertRule(`
+                .equiped-items .slot.potential::after, .equiped-items .slot.selected::after, .equiped-items .slot.using::after {
+                    width: 66px!important;
+                    height: 66px!important;
+                    top: -4px!important;
+                    left: -4px!important;
+                }`)
+                sheet.insertRule(`
+                 #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-boosters-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .booster .nicescroll-rails {
+                    right: 22.5rem!important;
+                }`)
+                sheet.insertRule(`
+                #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-equipement-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .armor .nicescroll-rails {
+                    right: 21rem!important;
+                }`)
+                sheet.insertRule(`
+                #shops .left-container .top-container {
+                    width: 17.5rem!important;
+                }`)
+
+                sheet.insertRule(`
+                .my-inventory-container .inventoryInfo {
+                    right: 18px !important;
+                }`)
+
+                //css rules for HH++ equip filter
+                sheet.insertRule(`
+                 .equip_filter_box {
+                   width: 5rem!important;
+                }`)
+                sheet.insertRule(`
+                .grid-selector {
+                    margin-bottom: 4px!important;
+                    flex-direction: column;
+                }`)
+                sheet.insertRule(`
+                 .grid-selector .clear-selector img, .grid-selector .selector-options div, .grid-selector .selector-options img {
+                    height: 24px!important;
+                    width: 24px!important;
+                }`)
+                sheet.insertRule(`
+                #my-hero-equipement-tab-container label.equip_filter {
+                    top: 6rem!important;
+                    left: 17rem!important;
+                    z-index: 4;
+                }`)
+                sheet.insertRule(`
+                #my-hero-equipement-tab-container .equip_filter_box.form-wrapper {
+                    top: 6.5rem!important;
+                    left: 13rem!important;
+                }`)
+                sheet.insertRule(`
+                #equipement-tab-container .right-container label.equip_filter {
+                    top: 6.5rem!important;
+                    right: 27.5rem!important;
+                    z-index: 4;
+                }`)
+                sheet.insertRule(`
+                #equipement-tab-container .equip_filter_box.form-wrapper {
+                    top: 7rem!important;
+                    left: 30.5rem!important;
+                }`)
+            })
+
+            this.hasRun = true
+        }
+    }
+
+    class HaremTweaks extends HHModule {
+        constructor () {
+            const baseKey = 'HaremTweaks'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `Harem Style Tweaks`
+            }
+            super({name: baseKey, configSchema})
+        }
+
+        shouldRun () {
+            return currentPage.includes('harem') && !currentPage.includes('hero') || currentPage.includes('girl')
+        }
+
+        run () {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            $(document).ready(() => {
+                if (currentPage.includes('harem') && !currentPage.includes('hero')) {
                     sheet.insertRule(`
                     #harem_left div.girls_list.grid_view div[girl]>.left>.icon span {
                         margin-right: -24px;
@@ -2778,7 +2811,8 @@
         new ImprovedWaifu(),
         new PachinkoLog(),
         new CopyContests(),
-        new MarketHaremTweaks()
+        new MarketTweaks(),
+        new HaremTweaks()
     ]
 
     setTimeout(() => {
