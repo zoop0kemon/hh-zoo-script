@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.3
+// @version         0.5.4
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -19,6 +19,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.4: Added basic support for mythic equips in Pachinko Log
 // 0.5.3: Split Market/Harem style tweaks
 // 0.5.2: Fixed market style conflicts with HH++ update and better Improved Waifu loading
 // 0.5.1: Uncovered Restock button
@@ -2363,15 +2364,15 @@
                     align-self: start;
                 }`);
 
-                const gems_abrv = {
-                    'darkness': 'GDo',
-                    'light': 'GSu',
-                    'psychic': 'GVo',
-                    'fire': 'GEc',
-                    'nature': 'GEx',
-                    'stone': 'GPh',
-                    'sun': 'GPl',
-                    'water': 'GSe'
+                const elm_abrv = {
+                    'darkness': 'Do',
+                    'light': 'Su',
+                    'psychic': 'Vo',
+                    'fire': 'Ec',
+                    'nature': 'Ex',
+                    'stone': 'Ph',
+                    'sun': 'Pl',
+                    'water': 'Se'
                 }
                 HHPlusPlus.Helpers.onAjaxResponse(/class=Pachinko&action=play/i, (response, opt) => {
                     const searchParams = new URLSearchParams(opt.data)
@@ -2405,13 +2406,21 @@
                             } else {
                                 const item = reward.value.skin.identifier
 
-                                roll.push(item+rarity+items.name_add)
+                                let equip = `${item}${rarity}`
+                                if (rarity == 'M') {
+                                    const c_resonance = reward.value.resonance_bonuses.class
+                                    const t_resonance = reward.value.resonance_bonuses.theme
+                                    equip = `${equip}${c_resonance.identifier}${c_resonance.resonance[0].toUpperCase()}${elm_abrv[t_resonance.identifier]}${t_resonance.resonance[0].toUpperCase()}`
+                                } else {
+                                    equip = `${equip}${items.name_add}`
+                                }
+                                roll.push(equip)
                             }
                         } else if (reward.type == 'frames') {
                             roll.push(`F${$(reward.value).text()}`)
                         } else if (reward.type == 'gems'){
                             const gem = $(reward.value).attr('src').match(/(?<=gems\/)(.+)(?=\.png)/g)[0]
-                            roll.push(gems_abrv[gem])
+                            roll.push(`G${elm_abrv[gem]}`)
                         }
                     })
 
