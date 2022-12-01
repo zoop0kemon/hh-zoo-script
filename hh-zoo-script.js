@@ -1,14 +1,13 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.4
+// @version         0.5.5
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
 // @match           https://*.comixharem.com/*
 // @match           https://*.hornyheroes.com/*
 // @match           https://*.pornstarharem.com/*
-// @match           https://*.mangarpg.com/*
 // @run-at          document-body
 // @updateURL       https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
 // @downloadURL     https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
@@ -19,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.5: Full support for mythic equips in Pachinko log and protection for Double Date Event
 // 0.5.4: Added basic support for mythic equips in Pachinko Log
 // 0.5.3: Split Market/Harem style tweaks
 // 0.5.2: Fixed market style conflicts with HH++ update and better Improved Waifu loading
@@ -1676,6 +1676,11 @@
             }
             super({name: baseKey, configSchema})
 
+            this.pool_updates = [{
+                'name': 'Mythic Equips',
+                'time': 1669279200000,
+                'types': ['mythic1', 'mythic1ng', 'event1', 'event1ng']
+            }]
             this.reward_keys = {
                 type: {
                     X: "books",
@@ -1710,33 +1715,39 @@
             return currentPage.includes('pachinko')
         }
 
-        countSummary(pachinko_log, type_info) {
+        countSummary(pachinko_log, type_info, time_start, time_end) {
             let pachinko_type = type_info.match(/\D+/)[0]
 
-            let summary = {total: pachinko_log.length}
+            let summary = {time_start: time_start, time_end: time_end, total: 0}
             pachinko_log.forEach((roll) => {
                 let drops = roll.split(',')
                 if (pachinko_type != 'great' || ((Hero.infos.level<100 && drops[1]<100) || (Hero.infos.level>99 && drops[1]>99))) {
-                    drops.slice(pachinko_type != 'great'? 1 : 2).forEach((item) => {
-                        let type = this.reward_keys.type[item[0]]
-                        if (type == 'equips') {
-                            item = item.match(/\D+\d+/g)[1]
-                            if (item[0] != 'L') {
-                                item = item[0]
+                    const time = parseInt(drops[0])
+                    if (time > time_start && time < time_end) {
+                        drops.slice(pachinko_type != 'great'? 1 : 2).forEach((item) => {
+                            let type = this.reward_keys.type[item[0]]
+                            if (type == 'equips') {
+                                const e_rarity = item.match(/\D+/g)[1][0]
+                                if (e_rarity != 'L') {
+                                    item = e_rarity
+                                } else {
+                                    item = item.match(/\D+\d+/g)[1]
+                                }
+                                item = 'E'+item
                             }
-                            item = 'E'+item
-                        }
-                        if (type == 'girls') {item = 'g'}
-                        summary[type]? summary[type].total++ : summary[type] = {total:1}
-                        summary[type][item] = summary[type][item]+1 || 1
-                        if (type != 'girls' && type !='gems') {
-                            let rarity = `rarity-${type=='equips'? item[1] : item.slice(-1)}`
-                            if (type == 'equips' && rarity!='rarity-L') {
-                                rarity = 'rarity-O'
+                            if (type == 'girls') {item = 'g'}
+                            summary[type]? summary[type].total++ : summary[type] = {total:1}
+                            summary[type][item] = summary[type][item]+1 || 1
+                            if (type != 'girls' && type !='gems') {
+                                let rarity = `rarity-${type=='equips'? item[1] : item.slice(-1)}`
+                                if (pachinko_type == 'great' && type == 'equips' && rarity!='rarity-L') {
+                                    rarity = 'rarity-O'
+                                }
+                                summary[type][rarity] = summary[type][rarity]+1 || 1
                             }
-                            summary[type][rarity] = summary[type][rarity]+1 || 1
-                        }
-                    })
+                        })
+                        summary.total += 1
+                    }
                 }
             })
             return summary
@@ -1748,6 +1759,8 @@
             let no_girls = type_info.slice(-2) == 'ng' ? true : false
             let rewards = games>1? (type!='event'&&(!no_girls || type=='great'))? games-1 : games : 1
             let reward_keys = this.reward_keys
+            const no_girls_summary = no_girls || (games>1 && (type!='great' && type!='event')) || (games==1 && type=='great')
+            const no_mythic_equip_summary = !((summary.time_start == this.pool_updates[0].time) && ((type == 'mythic' && games == 1) || (type == 'event')))
 
             function getPct(item) {
                 let cat = reward_keys.type[item[0]]
@@ -1759,18 +1772,18 @@
                 let count = summary[cat]? summary[cat][isTotal? 'total' : item] || 0 : 0
                 let pct = (100*count/(summary.total * (cat!='gems'? type == 'great' || type == 'event' ? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
 
-                return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}hh_title="${count}">${pct}%<span>`)
+                return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}hh_title="${count}">${pct}%</span>`)
             }
 
             return (`
             <div class="pachinko-summary ${type} ${games}-game${no_girls? ' no-girls' : ''} ${type_info}">
                 <div class="summary-header">
-                    <span class="log-button reset-log" pachinko="${type_info}">
+                    <span class="log-button reset-log" pachinko="${type_info}" start="${summary.time_start}" end="${summary.time_end}"">
                         <img alt="Reset ${gameConfig.pachinko} Log" hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/caracs/no_class.png">
                     </span>
                     <h1>${capFirst(type)}-${games}-${games>1? 'Games' : 'Game'}${no_girls? ' - No-Girls' : ''}</h1>
                     <span class="sample-count orb_icon o_${type!='event'? type[0] : 'v'}${games}" hh_title="Sample Size">${summary.total}</span>
-                    <span class="log-button record-log" pachinko="${type_info}">
+                    <span class="log-button record-log" pachinko="${type_info}" start="${summary.time_start}" end="${summary.time_end}">
                         <img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://${cdnHost}/design/ic_books_gray.svg">
                     </span>
                 </div>
@@ -1781,14 +1794,22 @@
                     <span>${type == 'mythic'? games == '1'? '10': games == '3'? '10 Shards and<br>30' : '25 Shards and<br>60' : type == 'event'? '70' : ''}
                           ${type == 'epic'? games == '1'? `${isHH? '1 Frame and ' : ''}50`: `1 Girl${isHH? ', 10 Frames,' : ''} and<br> 200` : ''} Gems</span>`}
                     <div class="rewards-summary">
-                        ${no_girls || (games>1 && (type!='great' && type!='event')) || (games==1 && type=='great') ? '' :
-                        `<div class="summary-div">
-                            <ul class="summary-grid girls-summary">
+                        ${no_girls_summary && no_mythic_equip_summary ? '' :
+                        `<div class="summary-div-special">
+                            ${no_girls_summary ? '' :
+                            `<ul class="summary-grid girls-summary">
                                 <li>
                                     <img alt="${gameConfig.Girl}" hh_title="${gameConfig.Girl}" src="https://${cdnHost}/pictures/design/harem.svg">
                                     ${getPct('g')}
                                 </li>
-                            </ul>
+                            </ul>`}
+                            ${no_mythic_equip_summary ? '' :
+                            `<ul class="summary-grid mythic-equip-summary">
+                                <li>
+                                    <img alt="Mythic Equip" hh_title="Mythic Equip" src="https://${cdnHost}/design/mythic_equipment/mythic_equipment.png">
+                                    ${getPct('EM')}
+                                </li>
+                            </ul>`}
                         </div>`}
                         ${type == 'event'? '' :
                         `<div class="summary-div">
@@ -2060,14 +2081,35 @@
             const type = $('.playing-zone').eq(0).attr('type-panel')
             const pachinko_log = lsGet('PachinkoLog') || {}
             let types = Object.keys(pachinko_log).filter(t => t.includes(type)).sort().sort((a,b) => a.match(/\d+/)[0]-b.match(/\d+/)[0])
+            // if (types.includes('epic1')) {types.push('event1')}
 
             let summaries = ``
             if (types.length) {
                 types.forEach((t) => {
-                    summaries += this.buildSummary(t,this.countSummary(pachinko_log[t],t))
+                    const p_log = pachinko_log[t]
+                    const min_time = parseInt(p_log[0].split(',')[0])
+                    const max_time = parseInt(p_log.at(-1).split(',')[0])
+
+                    let titles = []
+                    let times = [0]
+                    this.pool_updates.forEach((pool_update) => {
+                        if (pool_update.types.includes(t) && (min_time < pool_update.time)) {
+                            titles.push(`Before ${pool_update.name}`)
+                            times.push(pool_update.time)
+                        }
+                    })
+                    if (max_time > times.at(-1)) {
+                        titles.push('Current Pool')
+                        times.push(10000000000000) // arbitrarily large number
+                    }
+
+                    for (let i=0;i<titles.length;i++) {
+                        summaries += `<h1>${(titles.length > 1 || titles[0] != 'Current Pool') ? titles[i] : ''}</h1>
+                                      ${this.buildSummary(t, this.countSummary(pachinko_log[t], t, times[i], times[i+1]))}`
+                    }
                 })
-            }else {
-                summaries = `<h1>No Data Recorded<\h1>`
+            } else {
+                summaries = `<h1>No Data Recorded</h1>`
             }
 
             return summaries
@@ -2098,53 +2140,87 @@
             })
 
             const reward_keys = this.reward_keys
-            function copyLog(pachinko,pachinko_log) {
+            function copyLog(pachinko, pachinko_log, time_start, time_end) {
                 const type = pachinko.match(/\D+/)[0]
+                const girlDict = HHPlusPlus.Helpers.getGirlDictionary()
                 let log = ''
 
                 pachinko_log.forEach((roll) => {
                     let drops = roll.split(',').filter(e => e[0]!='F') //no need to print frames
                     let offset = type != 'great'? 1 : 2
-                    drops.slice(offset).forEach((item, index) => {
-                        const cat = reward_keys.type[item[0]]
-                        let drop = item
-                        if (cat == 'books' || cat == 'gifts' || cat == 'boosters') {
-                            const rarity = reward_keys.rarity[item.slice(-1)]
-                            const name = gameConfig[cat][item.slice(0,-1)]
-                            drop = `${type=='great'? `${rarity} ` : ''}${name}`
-                        }else if (cat == 'girls') {
-                            const girlDict = HHPlusPlus.Helpers.getGirlDictionary()
-                            drop = girlDict.get(item.match(/\d+/g)[0]).name
-                        }else if (cat == 'gems') {
-                            drop = reward_keys.gems[item]
-                        }else if (cat == 'frames') {
-                            let frames = item.match(/\d+/g)[0]
-                            drop = frames==1? 'Frame' : `${frames} Frames`
-                        }
-                        drops[index+offset] = drop
-                    })
 
-                    log += `${drops.join('\t')}\n`
+                    const time = parseInt(drops[0])
+                    if (time > time_start && time < time_end) {
+                        drops.slice(offset).forEach((item, index) => {
+                            const cat = reward_keys.type[item[0]]
+                            let drop = item
+
+                            if (cat == 'books' || cat == 'gifts' || cat == 'boosters') {
+                                const rarity = reward_keys.rarity[item.slice(-1)]
+                                const name = gameConfig[cat][item.slice(0,-1)]
+                                drop = `${type=='great'? `${rarity} ` : ''}${name}`
+                            } else if (cat == 'girls') {
+                                const girl_ids = item.match(/\d+/)
+                                let girl_names = []
+                                girl_ids.forEach((girl_id) => {
+                                    girl_names.push(girlDict.get(girl_id).name)
+                                })
+                                drop = girl_names.join(', ')
+                            } else if (cat == 'gems') {
+                                drop = reward_keys.gems[item]
+                            } else if (cat == 'frames') {
+                                let frames = item.match(/\d+/g)[0]
+                                drop = frames==1? 'Frame' : `${frames} Frames`
+                            }
+                            drops[index+offset] = drop
+                        })
+
+                        log += `${drops.join('\t')}\n`
+                    }
                 })
 
                 copyText(log)
             }
 
             $('.log-button.record-log').each(function (index) {
-                let pachinko = $(this).attr('pachinko')
+                const pachinko = $(this).attr('pachinko')
+                const time_start = parseInt($(this).attr('start'))
+                const time_end = parseInt($(this).attr('end'))
                 $(this).click(() => {
                     const pachinko_log = lsGet('PachinkoLog') || {}
-                    copyLog(pachinko,pachinko_log[pachinko])
+                    copyLog(pachinko, pachinko_log[pachinko], time_start, time_end)
                 })
             })
 
             $('.log-button.reset-log').each(function (index) {
-                let pachinko = $(this).attr('pachinko')
+                const pachinko = $(this).attr('pachinko')
+                const time_start = parseInt($(this).attr('start'))
+                const time_end = parseInt($(this).attr('end'))
                 $(this).click(() => {
                     let pachinko_log = lsGet('PachinkoLog') || {}
-                    copyLog(pachinko,pachinko_log[pachinko])
-                    delete pachinko_log[pachinko]
-                    $(`.pachinko-summary.${pachinko}`).remove()
+                    copyLog(pachinko, pachinko_log[pachinko], time_start, time_end)
+
+                    const summary = $(this).closest(`.pachinko-summary.${pachinko}`)
+                    summary.prev().remove()
+                    summary.remove()
+                    if ($('.pachinko-log-panel').eq(0).children().length == 0) {
+                        $('.pachinko-log-panel').append(`<h1>No Data Recorded</h1>`)
+                    }
+
+                    let new_log = []
+                    pachinko_log[pachinko].forEach((roll) => {
+                        let drops = roll.split(',')
+                        const time = parseInt(drops[0])
+
+                        if (!(time > time_start && time < time_end)) {
+                            new_log.push(roll)
+                        }
+                    })
+                    if (new_log.length == 0) {
+                        delete pachinko_log[pachinko]
+                    } else {
+                        pachinko_log[pachinko] = new_log
+                    }
                     lsSet('PachinkoLog', pachinko_log)
                 })
             })
@@ -2282,12 +2358,16 @@
                     grid-template-columns: 1fr;
                 }`);
                 sheet.insertRule(`
-                .summary-div {
+                .summary-div, .summary-div-special {
                     display: flex;
                     flex-wrap: nowrap;
                     flex-direction: row;
                     justify-content: center;
                     align-items: center;
+                }`);
+                sheet.insertRule(`
+                .summary-div-special {
+                    gap: 10px;
                 }`);
                 sheet.insertRule(`
                 .side-sum-container {
@@ -2354,9 +2434,8 @@
                     width: 168px;
                 }`);
                 sheet.insertRule(`
-                .summary-grid.girls-summary {
-                    grid-template-columns:
-                    min-content;
+                .summary-grid.girls-summary, .summary-grid.mythic-equip-summary {
+                    grid-template-columns: min-content;
                 }`);
                 sheet.insertRule(`
                 .summary-grid.gems-summary {
@@ -2387,9 +2466,11 @@
                     if (type == 'great') {roll.push(Hero.infos.level)}
 
                     if (rewards.shards) {
+                        let girl_ids = []
                         rewards.shards.forEach((shards) => {
-                            roll.push('g'+shards.id_girl)
+                            girl_ids.push(shards.id_girl)
                         })
+                        roll.push(`g${girl_ids.join('-')}`)
                     }
                     rewards.rewards.forEach((reward) => {
                         if (reward.type.includes('item') || reward.type == 'armor') {
@@ -2425,7 +2506,6 @@
                     })
 
                     if (response.no_more_girls) {
-                        console.log('no more girls')
                         no_girls[type] = true
                     }
 
@@ -2444,7 +2524,12 @@
             const configSchema = {
                 baseKey,
                 default: true,
-                label: `Copy Contests`
+                label: `Copy Contests`,
+                subSettings: [{
+                    key: 'active',
+                    label: `Also copy active Contests`,
+                    default: false
+                }]
             }
             super({name: baseKey, configSchema})
         }
@@ -2453,7 +2538,7 @@
             return currentPage.includes('activities')
         }
 
-        run () {
+        run ({active}) {
             if (this.hasRun || !this.shouldRun()) {return}
 
             HHPlusPlus.Helpers.defer(() => {
@@ -2493,12 +2578,22 @@
                     height: 28px;
                     margin-top: 0px;
                     margin-left: 10px;
-                }
-                `)
+                }`)
                 sheet.insertRule(`
                 .ranking .closed {
                     cursor: pointer;
                 }`)
+                if (active) {
+                    sheet.insertRule(`
+                    #contests>div>div.right_part>.ranking:not(.ended)>.closed {
+                        display: unset!important;
+                        font-size: 0!important;
+                        position: absolute!important;
+                        right: 1rem!important;
+                        left: unset!important;
+                        top: 5.75rem!important;
+                    }`)
+                }
             })
 
             this.hasRun = true
@@ -2615,9 +2710,16 @@
                 .my-inventory .bottom-container {
                     position: absolute;;
                     z-index: 100;
-                    display: block!important;
-                    left: 46.625rem!important;
-                    bottom: 4.5rem!important;
+                    flex-direction: column-reverse;
+                    justify-content: flex-end!important;
+                    left: 46.25rem!important;
+                    bottom: 5.25rem!important;
+                    height: 4.5rem;
+                    width: 7.5rem;
+                }`)
+                sheet.insertRule(`
+                .blue_text_button[disabled][rel="levelup"] {
+                    display: none;
                 }`)
                 sheet.insertRule(`
                 .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .armor, .my-hero-switch-content .my-inventory-container .booster {
@@ -2703,12 +2805,12 @@
                 sheet.insertRule(`
                 #my-hero-equipement-tab-container label.equip_filter {
                     top: 6rem!important;
-                    left: 17rem!important;
+                    left: 17.5rem!important;
                     z-index: 4;
                 }`)
                 sheet.insertRule(`
                 #my-hero-equipement-tab-container .equip_filter_box.form-wrapper {
-                    top: 6.5rem!important;
+                    top: 5.25rem!important;
                     left: 13rem!important;
                 }`)
                 sheet.insertRule(`
@@ -2719,8 +2821,8 @@
                 }`)
                 sheet.insertRule(`
                 #equipement-tab-container .equip_filter_box.form-wrapper {
-                    top: 7rem!important;
-                    left: 30.5rem!important;
+                    top: 5rem!important;
+                    left: 30rem!important;
                 }`)
             })
 
