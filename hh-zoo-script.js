@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.5
+// @version         0.5.6
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.6: Various bug fixes
 // 0.5.5: Full support for mythic equips in Pachinko log and protection for Double Date Event
 // 0.5.4: Added basic support for mythic equips in Pachinko Log
 // 0.5.3: Split Market/Harem style tweaks
@@ -466,13 +467,13 @@
                 }
             `)
             this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button>button[rel=finish]>span[cur]::before {
+                #missions>div .missions_wrap .mission_object .mission_button>button[rel=finish] [class*="_icn"] {
                     width: 12px;
                     height: 12px;
                 }
             `)
             this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button>button[rel=finish]>span {
+                #missions>div .missions_wrap .mission_object .mission_button>button[rel=finish] .price {
                     line-height: inherit;
                     margin-top: -2px;
                     font-size: 10px;
@@ -568,7 +569,7 @@
                 hobby: ref.hobbies.hobby,
                 fetish: ref.hobbies.fetish,
                 style: GT.design['girl_style_'+element+'_'+girl.class],
-                desc: this.desc ? this.cleanData(ref.desc.replaceAll('\n','')) : '',
+                desc: (this.desc && ref.desc) ? this.cleanData(ref.desc.replaceAll('\n','')) : '',
                 ref_id: ref.id_girl_ref
             }
 
@@ -2093,9 +2094,13 @@
                     let titles = []
                     let times = [0]
                     this.pool_updates.forEach((pool_update) => {
-                        if (pool_update.types.includes(t) && (min_time < pool_update.time)) {
-                            titles.push(`Before ${pool_update.name}`)
-                            times.push(pool_update.time)
+                        if (pool_update.types.includes(t)) {
+                            if (min_time < pool_update.time) {
+                                titles.push(`Before ${pool_update.name}`)
+                                times.push(pool_update.time)
+                            } else {
+                                times.splice(-1, 1, pool_update.time)
+                            }
                         }
                     })
                     if (max_time > times.at(-1)) {
@@ -2160,7 +2165,7 @@
                                 const name = gameConfig[cat][item.slice(0,-1)]
                                 drop = `${type=='great'? `${rarity} ` : ''}${name}`
                             } else if (cat == 'girls') {
-                                const girl_ids = item.match(/\d+/)
+                                const girl_ids = item.match(/\d+/g)
                                 let girl_names = []
                                 girl_ids.forEach((girl_id) => {
                                     girl_names.push(girlDict.get(girl_id).name)
