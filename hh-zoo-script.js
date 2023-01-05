@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.6
+// @version         0.5.7
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.7: Updated tooltips
 // 0.5.6: Various bug fixes
 // 0.5.5: Full support for mythic equips in Pachinko log and protection for Double Date Event
 // 0.5.4: Added basic support for mythic equips in Pachinko Log
@@ -1104,12 +1105,12 @@
                 $(".league_end_in").append(`
                 <div class="record_league">
                     <span id="last_week">
-                        <img alt="Copy Last Week's League" hh_title="Copy Last Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
+                        <img alt="Copy Last Week's League" tooltip hh_title="Copy Last Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
                     </span>
                 </div>
                 <div class="record_league">
                     <span id="this_week">
-                        <img alt="Copy This Week's League" hh_title="Copy This Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
+                        <img alt="Copy This Week's League" tooltip hh_title="Copy This Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
                     </span>
                 </div>`)
 
@@ -1265,16 +1266,16 @@
                     gradeSwitch += '</div>'
                     waifu_buttons.append(gradeSwitch)
 
-                    let $edit_pose = $(`<div class="round_blue_button edit-pose" hh_title="Edit Pose"><img src="https://${cdnHost}/design/menu/edit.svg"></div>`)
-                    let $reset_pose = $(`<div class="round_blue_button reset-pose hide" hh_title="Reset Pose"><img src="https://${cdnHost}/clubs/ic_xCross.png"></div>`)
-                    let $save_pose = $(`<div class="round_blue_button save-pose hide" hh_title="Save Pose"><img src="https://${cdnHost}/clubs/ic_Tick.png"></div>`)
+                    let $edit_pose = $(`<div class="round_blue_button edit-pose" tooltip hh_title="Edit Pose"><img src="https://${cdnHost}/design/menu/edit.svg"></div>`)
+                    let $reset_pose = $(`<div class="round_blue_button reset-pose hide" tooltip hh_title="Reset Pose"><img src="https://${cdnHost}/clubs/ic_xCross.png"></div>`)
+                    let $save_pose = $(`<div class="round_blue_button save-pose hide" tooltip hh_title="Save Pose"><img src="https://${cdnHost}/clubs/ic_Tick.png"></div>`)
                     let $waifu_edit = $('<div class="waifu-edit"></div>').append($edit_pose, $reset_pose, $save_pose)
                     waifu_buttons.append($waifu_edit)
 
-                    let $fav_girl = $(`<div class="round_blue_button fav-girl" hh_title="${fav? 'Unf' : 'F'}avorite ${gameConfig.Girl}"><img src="https://${cdnHost}/design/ic_star_${fav? 'orange' : 'white'}.svg"></div>`)
-                    let $waifu_mode = $(`<div class="round_blue_button waifu-mode" hh_title="Mode: ${mode} ${gameConfig.Girl}s"><img src="https://${cdnHost}/pictures/design/${mode=='All'? 'harem.svg' : 'clubs/ic_Girls_S.png'}"></div>`)
-                    let $random_waifu = $(`<div class="round_blue_button random-waifu" hh_title="Randomize ${gameConfig.waifu}"><img src="https://${cdnHost}/pictures/design/girls.svg"></div>`)
-                    let $cycle_waifu = $(`<div class="round_blue_button cycle-waifu" hh_title="${cycle? 'Pause Cycle' : `Cycle ${gameConfig.waifu}`}" style="font-size:${cycle? '24px' : '0px'}">||<img src="https://${cdnHost}/design/menu/forward.svg" style="display: ${cycle? 'none' : 'inherit'}"></div>`)
+                    let $fav_girl = $(`<div class="round_blue_button fav-girl" tooltip hh_title="${fav? 'Unf' : 'F'}avorite ${gameConfig.Girl}"><img src="https://${cdnHost}/design/ic_star_${fav? 'orange' : 'white'}.svg"></div>`)
+                    let $waifu_mode = $(`<div class="round_blue_button waifu-mode" tooltip hh_title="Mode: ${mode} ${gameConfig.Girl}s"><img src="https://${cdnHost}/pictures/design/${mode=='All'? 'harem.svg' : 'clubs/ic_Girls_S.png'}"></div>`)
+                    let $random_waifu = $(`<div class="round_blue_button random-waifu" tooltip hh_title="Randomize ${gameConfig.waifu}"><img src="https://${cdnHost}/pictures/design/girls.svg"></div>`)
+                    let $cycle_waifu = $(`<div class="round_blue_button cycle-waifu" tooltip hh_title="${cycle? 'Pause Cycle' : `Cycle ${gameConfig.waifu}`}" style="font-size:${cycle? '24px' : '0px'}">||<img src="https://${cdnHost}/design/menu/forward.svg" style="display: ${cycle? 'none' : 'inherit'}"></div>`)
                     let $waifu_right = $('<div class="waifu-right"></div>').append($fav_girl, $waifu_mode, $random_waifu, $cycle_waifu)
                     waifu_buttons.append($waifu_right)
 
@@ -1773,19 +1774,19 @@
                 let count = summary[cat]? summary[cat][isTotal? 'total' : item] || 0 : 0
                 let pct = (100*count/(summary.total * (cat!='gems'? type == 'great' || type == 'event' ? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
 
-                return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}hh_title="${count}">${pct}%</span>`)
+                return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}tooltip hh_title="${count}">${pct}%</span>`)
             }
 
             return (`
             <div class="pachinko-summary ${type} ${games}-game${no_girls? ' no-girls' : ''} ${type_info}">
                 <div class="summary-header">
                     <span class="log-button reset-log" pachinko="${type_info}" start="${summary.time_start}" end="${summary.time_end}"">
-                        <img alt="Reset ${gameConfig.pachinko} Log" hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/caracs/no_class.png">
+                        <img alt="Reset ${gameConfig.pachinko} Log" tooltip hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/caracs/no_class.png">
                     </span>
                     <h1>${capFirst(type)}-${games}-${games>1? 'Games' : 'Game'}${no_girls? ' - No-Girls' : ''}</h1>
-                    <span class="sample-count orb_icon o_${type!='event'? type[0] : 'v'}${games}" hh_title="Sample Size">${summary.total}</span>
+                    <span class="sample-count orb_icon o_${type!='event'? type[0] : 'v'}${games}" tooltip hh_title="Sample Size">${summary.total}</span>
                     <span class="log-button record-log" pachinko="${type_info}" start="${summary.time_start}" end="${summary.time_end}">
-                        <img alt="Copy ${gameConfig.pachinko} Log" hh_title="Copy ${gameConfig.pachinko} Log" src="https://${cdnHost}/design/ic_books_gray.svg">
+                        <img alt="Copy ${gameConfig.pachinko} Log" tooltip hh_title="Copy ${gameConfig.pachinko} Log" src="https://${cdnHost}/design/ic_books_gray.svg">
                     </span>
                 </div>
                 <div class="summary-body ${type}">
@@ -1800,14 +1801,14 @@
                             ${no_girls_summary ? '' :
                             `<ul class="summary-grid girls-summary">
                                 <li>
-                                    <img alt="${gameConfig.Girl}" hh_title="${gameConfig.Girl}" src="https://${cdnHost}/pictures/design/harem.svg">
+                                    <img alt="${gameConfig.Girl}" tooltip hh_title="${gameConfig.Girl}" src="https://${cdnHost}/pictures/design/harem.svg">
                                     ${getPct('g')}
                                 </li>
                             </ul>`}
                             ${no_mythic_equip_summary ? '' :
                             `<ul class="summary-grid mythic-equip-summary">
                                 <li>
-                                    <img alt="Mythic Equip" hh_title="Mythic Equip" src="https://${cdnHost}/design/mythic_equipment/mythic_equipment.png">
+                                    <img alt="Mythic Equip" tooltip hh_title="Mythic Equip" src="https://${cdnHost}/design/mythic_equipment/mythic_equipment.png">
                                     ${getPct('EM')}
                                 </li>
                             </ul>`}
@@ -1824,19 +1825,19 @@
                             </div>
                             <ul class="summary-grid books-summary legendary">
                                 <li>
-                                    <img alt="${gameConfig.books.XP1}" hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
+                                    <img alt="${gameConfig.books.XP1}" tooltip hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
                                     ${getPct('XP1L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP2}" hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
+                                    <img alt="${gameConfig.books.XP2}" tooltip hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
                                     ${getPct('XP2L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP3}" hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
+                                    <img alt="${gameConfig.books.XP3}" tooltip hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
                                     ${getPct('XP3L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP4}" hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
+                                    <img alt="${gameConfig.books.XP4}" tooltip hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
                                     ${getPct('XP4L')}
                                 </li>
                             </ul>`}
@@ -1846,19 +1847,19 @@
                             </div>
                             <ul class="summary-grid books-summary epic">
                                 <li>
-                                    <img alt="${gameConfig.books.XP1}" hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
+                                    <img alt="${gameConfig.books.XP1}" tooltip hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
                                     ${getPct('XP1E')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP2}" hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
+                                    <img alt="${gameConfig.books.XP2}" tooltip hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
                                     ${getPct('XP2E')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP3}" hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
+                                    <img alt="${gameConfig.books.XP3}" tooltip hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
                                     ${getPct('XP3E')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP4}" hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
+                                    <img alt="${gameConfig.books.XP4}" tooltip hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
                                     ${getPct('XP4E')}
                                 </li>
                             </ul>
@@ -1868,19 +1869,19 @@
                             </div>
                             <ul class="summary-grid books-summary rare">
                                 <li>
-                                    <img alt="${gameConfig.books.XP1}" hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
+                                    <img alt="${gameConfig.books.XP1}" tooltip hh_title="${gameConfig.books.XP1}" src="https://${cdnHost}/pictures/items/XP1.png">
                                     ${getPct('XP1R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP2}" hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
+                                    <img alt="${gameConfig.books.XP2}" tooltip hh_title="${gameConfig.books.XP2}" src="https://${cdnHost}/pictures/items/XP2.png">
                                     ${getPct('XP2R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP3}" hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
+                                    <img alt="${gameConfig.books.XP3}" tooltip hh_title="${gameConfig.books.XP3}" src="https://${cdnHost}/pictures/items/XP3.png">
                                     ${getPct('XP3R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.books.XP4}" hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
+                                    <img alt="${gameConfig.books.XP4}" tooltip hh_title="${gameConfig.books.XP4}" src="https://${cdnHost}/pictures/items/XP4.png">
                                     ${getPct('XP4R')}
                                 </li>
                             </ul>`}`}
@@ -1897,19 +1898,19 @@
                             </div>
                             <ul class="summary-grid gifts-summary legendary">
                                 <li>
-                                    <img alt="${gameConfig.gifts.K1}" hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
+                                    <img alt="${gameConfig.gifts.K1}" tooltip hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
                                     ${getPct('K1L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K2}" hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
+                                    <img alt="${gameConfig.gifts.K2}" tooltip hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
                                     ${getPct('K2L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K3}" hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
+                                    <img alt="${gameConfig.gifts.K3}" tooltip hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
                                     ${getPct('K3L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K4}" hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
+                                    <img alt="${gameConfig.gifts.K4}" tooltip hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
                                     ${getPct('K4L')}
                                 </li>
                             </ul>`}
@@ -1919,19 +1920,19 @@
                             </div>
                             <ul class="summary-grid books-summary epic">
                                 <li>
-                                    <img alt="${gameConfig.gifts.K1}" hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
+                                    <img alt="${gameConfig.gifts.K1}" tooltip hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
                                     ${getPct('K1E')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K2}" hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
+                                    <img alt="${gameConfig.gifts.K2}" tooltip hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
                                     ${getPct('K2E')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K3}" hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
+                                    <img alt="${gameConfig.gifts.K3}" tooltip hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
                                     ${getPct('K3E')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K4}" hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
+                                    <img alt="${gameConfig.gifts.K4}" tooltip hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
                                     ${getPct('K4E')}
                                 </li>
                             </ul>
@@ -1941,19 +1942,19 @@
                             </div>
                             <ul class="summary-grid books-summary rare">
                                 <li>
-                                    <img alt="${gameConfig.gifts.K1}" hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
+                                    <img alt="${gameConfig.gifts.K1}" tooltip hh_title="${gameConfig.gifts.K1}" src="https://${cdnHost}/pictures/items/K1.png">
                                     ${getPct('K1R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K2}" hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
+                                    <img alt="${gameConfig.gifts.K2}" tooltip hh_title="${gameConfig.gifts.K2}" src="https://${cdnHost}/pictures/items/K2.png">
                                     ${getPct('K2R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K3}" hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
+                                    <img alt="${gameConfig.gifts.K3}" tooltip hh_title="${gameConfig.gifts.K3}" src="https://${cdnHost}/pictures/items/K3.png">
                                     ${getPct('K3R')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.gifts.K4}" hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
+                                    <img alt="${gameConfig.gifts.K4}" tooltip hh_title="${gameConfig.gifts.K4}" src="https://${cdnHost}/pictures/items/K4.png">
                                     ${getPct('K4R')}
                                 </li>
                             </ul>`}`}
@@ -1965,19 +1966,19 @@
                             </div>
                             <ul class="summary-grid boosters-summary legendary">
                                 <li>
-                                    <img alt="${gameConfig.boosters.B1}" hh_title="${gameConfig.boosters.B1}" src="https://${cdnHost}/pictures/items/B1.png">
+                                    <img alt="${gameConfig.boosters.B1}" tooltip hh_title="${gameConfig.boosters.B1}" src="https://${cdnHost}/pictures/items/B1.png">
                                     ${getPct('B1L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.boosters.B2}" hh_title="${gameConfig.boosters.B2}" src="https://${cdnHost}/pictures/items/B2.png">
+                                    <img alt="${gameConfig.boosters.B2}" tooltip hh_title="${gameConfig.boosters.B2}" src="https://${cdnHost}/pictures/items/B2.png">
                                     ${getPct('B2L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.boosters.B3}" hh_title="${gameConfig.boosters.B3}" src="https://${cdnHost}/pictures/items/B3.png">
+                                    <img alt="${gameConfig.boosters.B3}" tooltip hh_title="${gameConfig.boosters.B3}" src="https://${cdnHost}/pictures/items/B3.png">
                                     ${getPct('B3L')}
                                 </li>
                                 <li>
-                                    <img alt="${gameConfig.boosters.B4}" hh_title="${gameConfig.boosters.B4}" src="https://${cdnHost}/pictures/items/B4.png">
+                                    <img alt="${gameConfig.boosters.B4}" tooltip hh_title="${gameConfig.boosters.B4}" src="https://${cdnHost}/pictures/items/B4.png">
                                     ${getPct('B4L')}
                                 </li>
                             </ul>
@@ -1994,27 +1995,27 @@
                             </div>
                             <ul class="summary-grid equips-summary legendary">
                                 <li>
-                                    <img alt="Super Sexy" hh_title="Super Sexy" src="https://${cdnHost}/pictures/misc/items_icons/16.svg">
+                                    <img alt="Super Sexy" tooltip hh_title="Super Sexy" src="https://${cdnHost}/pictures/misc/items_icons/16.svg">
                                     ${getPct('EL16')}
                                 </li>
                                 <li>
-                                    <img alt="Hardcore" hh_title="Hardcore" src="https://${cdnHost}/pictures/misc/items_icons/1.png">
+                                    <img alt="Hardcore" tooltip hh_title="Hardcore" src="https://${cdnHost}/pictures/misc/items_icons/1.png">
                                     ${getPct('EL1')}
                                 </li>
                                 <li>
-                                    <img alt="Charming" hh_title="Charming" src="https://${cdnHost}/pictures/misc/items_icons/2.png">
+                                    <img alt="Charming" tooltip hh_title="Charming" src="https://${cdnHost}/pictures/misc/items_icons/2.png">
                                     ${getPct('EL2')}
                                 </li>
                                 <li>
-                                    <img alt="Expert" hh_title="Expert" src="https://${cdnHost}/pictures/misc/items_icons/3.png">
+                                    <img alt="Expert" tooltip hh_title="Expert" src="https://${cdnHost}/pictures/misc/items_icons/3.png">
                                     ${getPct('EL3')}
                                 </li>
                                 <li>
-                                    <img alt="Tough" hh_title="Tough" src="https://${cdnHost}/pictures/misc/items_icons/4.png">
+                                    <img alt="Tough" tooltip hh_title="Tough" src="https://${cdnHost}/pictures/misc/items_icons/4.png">
                                     ${getPct('EL4')}
                                 </li>
                                 <li>
-                                    <img alt="Lucky" hh_title="Lucky" src="https://${cdnHost}/pictures/misc/items_icons/5.png">
+                                    <img alt="Lucky" tooltip hh_title="Lucky" src="https://${cdnHost}/pictures/misc/items_icons/5.png">
                                     ${getPct('EL5')}
                                 </li>
                             </ul>`}
@@ -2024,14 +2025,14 @@
                             </div>
                             <ul class="summary-grid equips-summary epic">
                                 <li>
-                                    <img alt="Equip" hh_title="Epic Equip" src="https://${cdnHost}/pictures/items/EH1.png">
+                                    <img alt="Equip" tooltip hh_title="Epic Equip" src="https://${cdnHost}/pictures/items/EH1.png">
                                     ${getPct('EE')}
                                 </li>
                             </ul>
                             ${(games == '1' && Hero.infos.level>99)? '' :
                             `<ul class="summary-grid equips-summary rare">
                                 <li>
-                                    <img alt="Equip" hh_title="Rare Equip" src="https://${cdnHost}/pictures/items/EH1.png">
+                                    <img alt="Equip" tooltip hh_title="Rare Equip" src="https://${cdnHost}/pictures/items/EH1.png">
                                     ${getPct('ER')}
                                 </li>
                             </ul>`}`}
@@ -2041,35 +2042,35 @@
                     `<span></span>
                     <ul class="summary-grid gems-summary">
                         <li>
-                            <img alt="${gameConfig.dom} Gems" hh_title="${gameConfig.dom} Gems" src="https://${cdnHost}/pictures/design/gems/darkness.png">
+                            <img alt="${gameConfig.dom} Gems" tooltip hh_title="${gameConfig.dom} Gems" src="https://${cdnHost}/pictures/design/gems/darkness.png">
                             ${getPct('GDo')}
                         </li>
                         <li>
-                            <img alt="Submissive Gems" hh_title="Submissive Gems" src="https://${cdnHost}/pictures/design/gems/light.png">
+                            <img alt="Submissive Gems" tooltip hh_title="Submissive Gems" src="https://${cdnHost}/pictures/design/gems/light.png">
                             ${getPct('GSu')}
                         </li>
                         <li>
-                            <img alt="Voyeur Gems" hh_title="Voyeur Gems" src="https://${cdnHost}/pictures/design/gems/psychic.png">
+                            <img alt="Voyeur Gems" tooltip hh_title="Voyeur Gems" src="https://${cdnHost}/pictures/design/gems/psychic.png">
                             ${getPct('GVo')}
                         </li>
                         <li>
-                            <img alt="Eccentric Gems" hh_title="Eccentric Gems" src="https://${cdnHost}/pictures/design/gems/fire.png">
+                            <img alt="Eccentric Gems" tooltip hh_title="Eccentric Gems" src="https://${cdnHost}/pictures/design/gems/fire.png">
                             ${getPct('GEc')}
                         </li>
                         <li>
-                            <img alt="Exhibitionist Gems" hh_title="Exhibitionist Gems" src="https://${cdnHost}/pictures/design/gems/nature.png">
+                            <img alt="Exhibitionist Gems" tooltip hh_title="Exhibitionist Gems" src="https://${cdnHost}/pictures/design/gems/nature.png">
                             ${getPct('GEx')}
                         </li>
                         <li>
-                            <img alt="Physical Gems" hh_title="Physical Gems" src="https://${cdnHost}/pictures/design/gems/stone.png">
+                            <img alt="Physical Gems" tooltip hh_title="Physical Gems" src="https://${cdnHost}/pictures/design/gems/stone.png">
                             ${getPct('GPh')}
                         </li>
                         <li>
-                            <img alt="Playful Gems" hh_title="Playful Gems" src="https://${cdnHost}/pictures/design/gems/sun.png">
+                            <img alt="Playful Gems" tooltip hh_title="Playful Gems" src="https://${cdnHost}/pictures/design/gems/sun.png">
                             ${getPct('GPl')}
                         </li>
                         <li>
-                            <img alt="Sensual Gems" hh_title="Sensual Gems" src="https://${cdnHost}/pictures/design/gems/water.png">
+                            <img alt="Sensual Gems" tooltip hh_title="Sensual Gems" src="https://${cdnHost}/pictures/design/gems/water.png">
                             ${getPct('GSe')}
                         </li>
                     </ul>`}
@@ -2548,6 +2549,7 @@
 
             HHPlusPlus.Helpers.defer(() => {
                 $(".ranking.over_panel .closed").each(function (index) {
+                    $(this).attr('tooltip','')
                     $(this).attr('hh_title','Copy Contest')
                     $(this).append('<img src="https://hh.hh-content.com/design/ic_books_gray.svg">')
 
