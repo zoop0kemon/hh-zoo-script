@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.7
+// @version         0.5.8
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.8: Fixed some style errors
 // 0.5.7: Updated tooltips
 // 0.5.6: Various bug fixes
 // 0.5.5: Full support for mythic equips in Pachinko log and protection for Double Date Event
@@ -958,7 +959,7 @@
                     width: 100%;
                 }`);
                 sheet.insertRule(`
-                .girl-data-changes th, td {
+                .girl-data-changes th, .girl-data-changes td {
                     padding: 0px 5px;
                     vertical-align: middle;
                     background: #cccccc42;
@@ -2907,7 +2908,7 @@
                         margin-bottom: 0.25rem;
                     }`)
                     sheet.insertRule(`
-                    .inventory {
+                    .switch-tab-content .inventory {
                         grid-auto-flow: column;
                         grid-template-rows: auto auto auto auto;
                         height: 22.5rem;
