@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.8
+// @version         0.5.9
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.9: Fixed error with Improved Waifu and animated girl
 // 0.5.8: Fixed some style errors
 // 0.5.7: Updated tooltips
 // 0.5.6: Various bug fixes
@@ -1224,31 +1225,35 @@
                     let selected_grade = girlInfo.grade === undefined ? Math.min(waifu.selected_grade, max_grade, unlocked_grade) : girlInfo.grade
                     let fav = girlInfo.fav || false
 
-                    // replace animated girl
-                    let waifu_animated = $('.waifu-container>canvas')
-                    if (waifu_animated.length > 0) {
-                        waifu_animated.eq(0).replaceWith(`<img src="https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png" class="avatar ">`)
-                    }
-                    // if hidden, put girl and re setup hide button
                     let display = waifuInfo.display || waifu.display
                     let $eye = $(".eye")
-                    if (waifu.display == 0) {
-                        $('.waifu-container').eq(0).append(`<img src="https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png" class="avatar ">`)
-                        if (display == 1) {
-                            $eye[0].children[0].src = `https://${cdnHost}/quest/ic_eyeclosed.svg`
-                        }
-                    }
-
                     const setup_waifu_image = () => {
+                        // replace animated girl
+                        let waifu_animated = $('.waifu-container>canvas')
+                        if (waifu_animated.length > 0) {
+                            if ($('.waifu-container').children().length == 1) {
+                                waifu_animated.eq(0).replaceWith(`<img src="https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png" class="avatar ">`)
+                            } else {
+                                waifu_animated.remove()
+                            }
+                        }
+                        // if hidden, put girl and re setup hide button
+                        if (waifu.display == 0) {
+                            $('.waifu-container').eq(0).append(`<img src="https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png" class="avatar ">`)
+                            if (display == 1) {
+                                $eye[0].children[0].src = `https://${cdnHost}/quest/ic_eyeclosed.svg`
+                            }
+                        }
+                        // set selected girl and grade
                         if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
                             $('.waifu-container>img').eq(0).attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
                         }
                     }
-                    if ($('.waifu-container>img').length) {
+                    if ($('.waifu-container').children().length) {
                         setup_waifu_image()
                     }  else {
                         const observer = new MutationObserver(() => {
-                            if ($('.waifu-container>img').length) {
+                            if ($('.waifu-container').children().length) {
                                 setup_waifu_image()
                                 observer.disconnect()
                             }
