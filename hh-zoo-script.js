@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.9
+// @version         0.5.10
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.5.10: Fixing copy league buttons and adjusting Improved Waifu placement
 // 0.5.9: Fixed error with Improved Waifu and animated girl
 // 0.5.8: Fixed some style errors
 // 0.5.7: Updated tooltips
@@ -1104,7 +1105,7 @@
 
                 this.recordData()
 
-                $(".league_end_in").append(`
+                $(".leagues_middle_header_script").append(`
                 <div class="record_league">
                     <span id="last_week">
                         <img alt="Copy Last Week's League" tooltip hh_title="Copy Last Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
@@ -1124,12 +1125,6 @@
                 })
 
                 sheet.insertRule(`
-                @media (min-width: 1026px) {
-                    .individualDisplaySwitch {
-                        left: 55px!important;
-                    }
-                }`);
-                sheet.insertRule(`
                 .record_league {
                     position: absolute;
                     cursor: pointer;
@@ -1137,15 +1132,15 @@
                 sheet.insertRule(`
                 @media (min-width: 1026px) {
                     .record_league {
-                        left: 140px;
-                        top: -37px;
+                        left: 360px;
+                        top: 30px;
                     }
                 }`);
                 sheet.insertRule(`
                 @media (max-width: 1025px) {
                     .record_league {
-                        left: 530px;
-                        top: 6px;
+                        left: 510px;
+                        top: 45px;
                     }
                 }`);
                 sheet.insertRule(`
@@ -1561,7 +1556,7 @@
                     }`)
                     sheet.insertRule(`
                     .waifu-buttons-container .diamond-bar {
-                        right: 110px;
+                        right: 90px;
                         width: 240px;
                         display: flex;
                         justify-content: center;
