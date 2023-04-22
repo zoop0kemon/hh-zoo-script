@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.5.10
+// @version         0.6.0
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
 // @match           https://*.comixharem.com/*
 // @match           https://*.hornyheroes.com/*
 // @match           https://*.pornstarharem.com/*
+// @match           https://*.mangarpg.com/*
 // @run-at          document-body
 // @updateURL       https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
 // @downloadURL     https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
@@ -18,6 +19,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.0: Migrated Improved Waifu and Compact Daily Missions into HH++, and added Villain Drops Recorder (off by default)
 // 0.5.10: Fixing copy league buttons and adjusting Improved Waifu placement
 // 0.5.9: Fixed error with Improved Waifu and animated girl
 // 0.5.8: Fixed some style errors
@@ -101,7 +103,6 @@
             girl: 'girl',
             Girl: 'Girl',
             career: 'Career',
-            waifu: 'Waifu',
             pachinko: 'Pachinko',
             dom: 'Dominatrix',
             books: {
@@ -127,7 +128,6 @@
             girl: 'guy',
             Girl: 'Guy',
             career: 'Career',
-            waifu: 'Boyfriend',
             pachinko: 'Pachinko',
             dom: 'Dom',
             books: {
@@ -153,7 +153,6 @@
             girl: 'girl',
             Girl: 'Girl',
             career: 'Super Power',
-            waifu: 'Waifu',
             pachinko: 'Night-club',
             dom: 'Dominatrix',
             books: {
@@ -179,7 +178,6 @@
             girl: 'girl',
             Girl: 'Girl',
             career: 'Career',
-            waifu: 'Waifu',
             pachinko: 'Night-club',
             dom: 'Dominatrix',
             books: {
@@ -226,6 +224,30 @@
     }
     function lsRm(key) {
         return localStorage.removeItem(`${LS_CONFIG_NAME}${key}`)
+    }
+
+    // Move old Waifu Info into HH++
+    let waifu_info = lsGet('WaifuInfo')
+    if (waifu_info) {
+        console.log("Migrating Improved Waifu data into HH++")
+        waifu_info.display = !!parseInt(waifu_info.display)
+        waifu_info.girl_id = waifu_info.girl_id.toString()
+
+        for (let girl in waifu_info.girls) {
+            const girl_info = waifu_info.girls[girl]
+            delete girl_info.unlocked
+            if (girl_info.pose) {
+                if (!Object.keys(girl_info.pose).length) {
+                    delete girl_info.pose
+                }
+            }
+            if (!Object.keys(girl_info).length) {
+                delete waifu_info.girls[girl]
+            }
+        }
+
+        HHPlusPlus.Helpers.lsSet('HHPlusPlusWaifuInfo', waifu_info)
+        lsRm('WaifuInfo')
     }
 
     function copyText(text) {
@@ -301,200 +323,6 @@
         }
     }
 
-    class DailyMissionsRestyle extends STModule {
-        constructor () {
-            const baseKey = 'dailyMissions'
-            const configSchema = {
-                baseKey,
-                default: true,
-                label: 'Daily Missions restyle'
-            }
-            super({name: baseKey, configSchema})
-        }
-
-        shouldRun() {return currentPage.includes('activities')}
-
-        injectCss() {
-            this.insertRule(`
-                #missions>div #missions_counter .missions-counter-rewards {
-                    display: none;
-                }
-            `)
-            //mission wrap
-            this.insertRule(`
-                #missions>div .missions_wrap {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr 1fr;
-                    grid-gap: 4px;
-                    align-content: start;
-                }
-            `)
-            //mission object
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object {
-                    height: 104px;
-                    margin-bottom: 0px;
-                }
-            `)
-            //mission image
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_image {
-                    margin-top: 15px;
-                    margin-left: 2px;
-                    margin-right: 0px;
-                    width: 80px;
-                    height: 80px;
-                    border: 2px solid #fff;
-                }
-            `)
-            //mission details
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_details {
-                    width: 150px;
-                    padding: 4px 6px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_details h1 {
-                    position: absolute;
-                    top: -3px;
-                    left: 5%;
-                    width: 90%;
-                    text-align: center;
-                    font-size: 13px!important;
-                    overflow: hidden;
-                    white-space: nowrap;
-                    text-overflow: ellipsis;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object.legendary .mission_details h1:hover {
-                    top: -7px;
-                    text-overflow: clip;
-                    overflow: visable;
-                    white-space: unset;
-                    background-color: rgba(8, 8, 8, 0.75);
-                    padding: 0px 6px;
-                    border-radius: 4px;
-                    border-width: 4px;
-                    border-style: solid;
-                    border-color: rgba(204, 204, 204, 0.25);
-
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_details p {
-                    font-size: 9px;
-                    margin-top: 12px;
-                    line-height: 10px;
-                }
-            `)
-            //mission reward
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_reward {
-                    width: auto;
-                    height: 50%;
-                    padding-left: 0px;
-                    padding-top: 15px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_reward .reward_wrap .slot {
-                    margin-right: 4px;
-                }
-            `)
-            //mission button
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button {
-                    font-size: 12px;
-                    height: 42%;
-                    position: absolute;
-                    right: 3px;
-                    bottom: 4px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button .duration {
-                    top: 2px;
-                    left: 0px;
-                    overflow-x: hidden;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button>button[rel=mission_start] {
-                    height: 60%;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button button {
-                    margin-top: 0px;
-                    position: initial;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button .hh_bar {
-                    top: 2px;
-                    left: 2px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button .hh_bar .backbar {
-                    top: 10px;
-                    width: 90px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button .hh_bar .text {
-                    top: 0px;
-                    width: 100%;
-                    letter-spacing: 0px;
-                    font-size: 0px;
-                    text-align: center;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button .hh_bar .text>span {
-                    font-size: 11px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button>button[rel=finish] {
-                    position: relative;
-                    display: block;
-                    padding: 0px 0px;
-                    width: 90px;
-                    height: 25px;
-                    top: 22px;
-                    left: 2px;
-                    line-height: 12px;
-                    font-size: 9px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button>button[rel=finish] [class*="_icn"] {
-                    width: 12px;
-                    height: 12px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button>button[rel=finish] .price {
-                    line-height: inherit;
-                    margin-top: -2px;
-                    font-size: 10px;
-                }
-            `)
-            this.insertRule(`
-                #missions>div .missions_wrap .mission_object .mission_button>button[rel=claim] {
-                    width: 86px;
-                    height: 36px;
-                    margin-top: 6px;
-                    padding: 8px 5px;
-                    line-height: 10px;
-                }
-            `)
-        }
-    }
-
     class GirlDataRecord extends HHModule {
         constructor () {
             const baseKey = 'girlDataRecord'
@@ -548,6 +376,7 @@
         }
 
         getGirlInfo (id) {
+            const {girlsDataList, GT} = window
             const girl = girlsDataList[id]
             const ref = girl.ref
             const element = girl.element
@@ -594,6 +423,7 @@
         }
 
         buildNewGirlList (newGirls) {
+            const {girlsDataList} = window
             let list = ''
             for (let i=0;i<newGirls.length;i++){
                 if (girlsDataList[newGirls[i]]) {
@@ -607,6 +437,7 @@
         }
 
         buildChangesTable (dataChanges) {
+            const {girlsDataList} = window
             let tableBody = ''
             for (let i=0;i<dataChanges.length;i++) {
                 let change = dataChanges[i]
@@ -669,6 +500,7 @@
             this.desc = desc
 
             $(document).ready(() => {
+                const {girlsDataList} = window
                 const girlIDs = Object.keys(girlsDataList)
                 let girlData = lsGet('GirlData') || {}
                 let newGirls = lsGet('NewGirls') || []
@@ -1152,517 +984,6 @@
                     position: inherit;
                     left: 35px;
                 }`);
-            })
-
-            this.hasRun = true
-        }
-    }
-
-    class ImprovedWaifu extends HHModule {
-        constructor () {
-            const baseKey = 'improvedWaifu'
-            const configSchema = {
-                baseKey,
-                default: true,
-                label: `Improved ${gameConfig.waifu} (Visit Harem Page first)`
-            }
-            super({name: baseKey, configSchema})
-        }
-
-        shouldRun () {
-            return currentPage.includes('home') || (currentPage.includes('harem') && !currentPage.includes('hero')) || currentPage.includes('waifu.html')
-        }
-
-        getIds (waifuInfo, mode, favsOnly=false) {
-            if (mode == 'Favorite') {
-                let ids = Object.entries(waifuInfo.girls).filter(([key,value])=>value.fav).map(([key])=>(key))
-                if (ids.length!=0||favsOnly) {
-                    return ids
-                }
-            }
-            return Object.keys(waifuInfo.girls)
-        }
-
-        run () {
-            if (this.hasRun || !this.shouldRun()) {return}
-
-            $(document).ready(() => {
-                if (currentPage.includes('home')) {
-                    let waifuInfo = lsGet('WaifuInfo') || {girls:{}}
-                    let cycle = waifuInfo.cycle || false
-                    let mode = waifuInfo.mode || 'All'
-                    let ids = this.getIds(waifuInfo, mode)
-                    let girl_id = waifuInfo.girl_id || waifu.id_girl;
-                    if (cycle) {
-                        let temp_id = girl_id
-                        if (ids.length == 1) {
-                            temp_id = ids[0]
-                        } else {
-                            while (temp_id == girl_id) {
-                                temp_id = ids[Math.floor(Math.random()*ids.length)]
-                            }
-                        }
-                        girl_id = temp_id
-                    }
-                    if (waifuInfo.individual) {
-                        girl_id = waifu.id_girl.toString()
-                        waifuInfo.individual = false
-                    }
-                    waifuInfo.girl_id = girl_id
-                    lsSet('WaifuInfo', waifuInfo)
-                    const girlDict = HHPlusPlus.Helpers.getGirlDictionary()
-                    let dictGirl = girlDict.get(girl_id)
-                    if (!dictGirl) {console.log("Improved Waifu WARNING: Missing max grade info, please visit the harem page."); return}
-                    let girlInfo = waifuInfo.girls[girl_id]
-                    if (!girlInfo) {console.log("Improved Waifu WARNING: Missing unlocked grade info, please visit the harem page."); return}
-                    let unlocked_grade = girlInfo.unlocked
-                    let max_grade = dictGirl.grade || unlocked_grade
-                    let selected_grade = girlInfo.grade === undefined ? Math.min(waifu.selected_grade, max_grade, unlocked_grade) : girlInfo.grade
-                    let fav = girlInfo.fav || false
-
-                    let display = waifuInfo.display || waifu.display
-                    let $eye = $(".eye")
-                    const setup_waifu_image = () => {
-                        // replace animated girl
-                        let waifu_animated = $('.waifu-container>canvas')
-                        if (waifu_animated.length > 0) {
-                            if ($('.waifu-container').children().length == 1) {
-                                waifu_animated.eq(0).replaceWith(`<img src="https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png" class="avatar ">`)
-                            } else {
-                                waifu_animated.remove()
-                            }
-                        }
-                        // if hidden, put girl and re setup hide button
-                        if (waifu.display == 0) {
-                            $('.waifu-container').eq(0).append(`<img src="https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png" class="avatar ">`)
-                            if (display == 1) {
-                                $eye[0].children[0].src = `https://${cdnHost}/quest/ic_eyeclosed.svg`
-                            }
-                        }
-                        // set selected girl and grade
-                        if (selected_grade != waifu.selected_grade || girl_id != waifu.girl_id) {
-                            $('.waifu-container>img').eq(0).attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
-                        }
-                    }
-                    if ($('.waifu-container').children().length) {
-                        setup_waifu_image()
-                    }  else {
-                        const observer = new MutationObserver(() => {
-                            if ($('.waifu-container').children().length) {
-                                setup_waifu_image()
-                                observer.disconnect()
-                            }
-                        })
-                        observer.observe($('.waifu-container')[0], {childList: true})
-                    }
-
-                    $('.waifu-buttons-container a').remove()
-                    let waifu_buttons = $('.waifu-buttons-container').eq(0)
-
-                    // pose switch
-                    let gradeSwitch = `<div class="diamond-bar"><div class="girls-name"><a href="/waifu.html">${dictGirl.name}</a><a href="/waifu.html"><img src="https://${cdnHost}/design/menu/edit.svg"></a></div>`
-                    for (let i=0;i<7;i++) {
-                        gradeSwitch += `<div class="diamond${i==selected_grade? ' selected': ''} ${i<=unlocked_grade ? 'un' : ''}locked${i>max_grade? ' hide' : ''}"></div>`
-                    }
-                    gradeSwitch += '</div>'
-                    waifu_buttons.append(gradeSwitch)
-
-                    let $edit_pose = $(`<div class="round_blue_button edit-pose" tooltip hh_title="Edit Pose"><img src="https://${cdnHost}/design/menu/edit.svg"></div>`)
-                    let $reset_pose = $(`<div class="round_blue_button reset-pose hide" tooltip hh_title="Reset Pose"><img src="https://${cdnHost}/clubs/ic_xCross.png"></div>`)
-                    let $save_pose = $(`<div class="round_blue_button save-pose hide" tooltip hh_title="Save Pose"><img src="https://${cdnHost}/clubs/ic_Tick.png"></div>`)
-                    let $waifu_edit = $('<div class="waifu-edit"></div>').append($edit_pose, $reset_pose, $save_pose)
-                    waifu_buttons.append($waifu_edit)
-
-                    let $fav_girl = $(`<div class="round_blue_button fav-girl" tooltip hh_title="${fav? 'Unf' : 'F'}avorite ${gameConfig.Girl}"><img src="https://${cdnHost}/design/ic_star_${fav? 'orange' : 'white'}.svg"></div>`)
-                    let $waifu_mode = $(`<div class="round_blue_button waifu-mode" tooltip hh_title="Mode: ${mode} ${gameConfig.Girl}s"><img src="https://${cdnHost}/pictures/design/${mode=='All'? 'harem.svg' : 'clubs/ic_Girls_S.png'}"></div>`)
-                    let $random_waifu = $(`<div class="round_blue_button random-waifu" tooltip hh_title="Randomize ${gameConfig.waifu}"><img src="https://${cdnHost}/pictures/design/girls.svg"></div>`)
-                    let $cycle_waifu = $(`<div class="round_blue_button cycle-waifu" tooltip hh_title="${cycle? 'Pause Cycle' : `Cycle ${gameConfig.waifu}`}" style="font-size:${cycle? '24px' : '0px'}">||<img src="https://${cdnHost}/design/menu/forward.svg" style="display: ${cycle? 'none' : 'inherit'}"></div>`)
-                    let $waifu_right = $('<div class="waifu-right"></div>').append($fav_girl, $waifu_mode, $random_waifu, $cycle_waifu)
-                    waifu_buttons.append($waifu_right)
-
-                    const if_hidden = () => {
-                        if (display == 0) {
-                            $('.waifu-container>img').eq(0).toggleClass('hide')
-                            $('.diamond-bar').eq(0).toggleClass('hide')
-                            $('.waifu-edit').eq(0).toggleClass('hide')
-                            $('.waifu-right').eq(0).toggleClass('hide')
-                            $eye[0].children[0].src = `https://${cdnHost}/quest/ic_eyeopen.svg`
-                        }
-                    }
-                    if ($('.waifu-container>img').length) {
-                        if_hidden()
-                    } else {
-                        const observer = new MutationObserver(() => {
-                            if ($('.waifu-container>img').length) {
-                                if_hidden()
-                                observer.disconnect()
-                            }
-                        })
-                        observer.observe($('.waifu-container')[0], {childList: true})
-                    }
-
-                    // buttons
-                    $eye.prop("onclick", null).off("click");
-                    $eye.click(function() {
-                        $('.waifu-container>img').eq(0).toggleClass('hide')
-                        $('.diamond-bar').eq(0).toggleClass('hide')
-                        $('.waifu-edit').eq(0).toggleClass('hide')
-                        $('.waifu-right').eq(0).toggleClass('hide')
-                        if (display == 0) {
-                            this.children[0].src = `https://${cdnHost}/quest/ic_eyeclosed.svg`
-                            display='1'
-                        } else {
-                            this.children[0].src = `https://${cdnHost}/quest/ic_eyeopen.svg`
-                            display='0'
-                        }
-                        waifuInfo.display = display
-                        lsSet('WaifuInfo',waifuInfo)
-                    })
-
-                    // waifu-edit
-                    let editing = false, panning = false;
-                    let scale, x, y
-                    try {scale = girlInfo.pose[selected_grade].scale || 1} catch {scale = 1}
-                    try {x = girlInfo.pose[selected_grade].x || 0} catch {x = 0}
-                    try {y = girlInfo.pose[selected_grade].y || 0} catch {y = 0}
-                    let cord = {
-                        x: x,
-                        y: y,
-                    }
-                    let start = {x:0, y:0};
-                    $edit_pose.click(function () {
-                        $(".waifu-edit div").toggleClass("hide")
-                        editing = true
-                    })
-
-                    $save_pose.click(function () {
-                        $(".waifu-edit div").toggleClass("hide")
-                        editing = false
-                        if (cord.x != 0 || cord.y != 0 || scale != 1) {
-                            if (!girlInfo.pose) {girlInfo.pose = {}}
-                            let temp = {}
-                            if (cord.x != 1) {temp.x = Math.round(cord.x)}
-                            if (cord.y != 1) {temp.y = Math.round(cord.y)}
-                            if (scale != 1) {temp.scale = +scale.toFixed(2)}
-                            girlInfo.pose[selected_grade] = temp
-                        } else if (girlInfo.pose) {
-                            delete girlInfo.pose[selected_grade]
-                        }
-                        lsSet('WaifuInfo',waifuInfo)
-                    })
-
-                    $reset_pose.click(function () {
-                        $('.waifu-container>img').eq(0).css('transform','')
-                        cord = {x:0, y:0}
-                        start = {x:0, y:0}
-                        scale = 1;
-                    })
-
-                    function setTransform() {
-                        $('.waifu-container>img').eq(0).css('transform',`translate(${Math.round(cord.x)}px, ${Math.round(cord.y)}px) scale(${scale})`);
-                    }
-
-                    const setup_waifu_image_edit = () => {
-                        let waifu_image = $('.waifu-container>img').eq(0)
-                        const size = {width: waifu_image.width()/2, height: waifu_image.height()/2}
-
-                        setTransform();
-
-                        waifu_image.mousedown(function (e) {
-                            if (!editing) {return;}
-                            e.preventDefault();
-                            start = {x: e.clientX-cord.x, y: e.clientY-cord.y}
-                            panning = true;
-                        })
-                        waifu_image.mouseup(function (e) {
-                            if (!editing) {return}
-                            e.preventDefault();
-                            panning = false;
-                        })
-                        waifu_image.mouseleave(function (e) {
-                            if (!editing) {return}
-                            panning = false;
-                        })
-                        waifu_image.mousemove(function (e) {
-                            if(!panning||!editing) {return}
-                            cord = {x: e.clientX - start.x, y: e.clientY-start.y}
-                            setTransform();
-                        })
-                        waifu_image.bind('mousewheel', function (e) {
-                            if (!editing) {return}
-                            e.preventDefault();
-                            const offset = waifu_image.offset(), old_scale = scale
-                            const point = {x: e.clientX-offset.left, y: e.clientY-offset.top}
-                            if(e.originalEvent.deltaY < 0) {
-                                scale += 0.1;
-                            } else {
-                                scale = Math.max(scale-0.05, 0.1);
-                            }
-                            // translation needs improvment
-                            cord = {x: cord.x-(scale/old_scale-1)*(point.x-size.width*old_scale),
-                                    y: cord.y-(scale/old_scale-1)*(point.y-size.height*old_scale)}
-                            setTransform();
-                        })
-                    }
-                    if ($('.waifu-container>img').length) {
-                        setup_waifu_image_edit()
-                    } else {
-                        const observer = new MutationObserver(() => {
-                            if ($('.waifu-container>img').length) {
-                                setup_waifu_image_edit()
-                                observer.disconnect()
-                            }
-                        })
-                        observer.observe($('.waifu-container')[0], {childList: true})
-                    }
-
-                    $('.diamond').each(function (index) {
-                        $(this).click(() => {
-                            if (selected_grade!=index && $(this).hasClass('unlocked')) {
-                                if (editing) {
-                                    $(".waifu-edit div").toggleClass("hide")
-                                    editing = false
-                                }
-                                $('.diamond.unlocked').eq(selected_grade).removeClass('selected')
-                                $(this).addClass('selected')
-                                selected_grade = index
-                                $('.waifu-container>img').eq(0).attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${index}.png`)
-                                start = {x:0, y:0}
-                                try {scale = girlInfo.pose[selected_grade].scale || 1} catch {scale = 1}
-                                try {x = girlInfo.pose[selected_grade].x || 0} catch {x = 0}
-                                try {y = girlInfo.pose[selected_grade].y || 0} catch {y = 0}
-                                cord = {x: x, y: y}
-                                setTransform();
-                                girlInfo.grade = selected_grade
-                                lsSet('WaifuInfo',waifuInfo)
-                            }
-                        })
-                    })
-
-                    // waifu-right
-                    $fav_girl.click(() => {
-                        if (fav) {
-                            $fav_girl.attr('hh_title',`Favorite ${gameConfig.Girl}`)
-                            $fav_girl.children(0).attr('src',`https://${cdnHost}/design/ic_star_white.svg`)
-                            delete girlInfo.fav
-                        } else {
-                            $fav_girl.attr('hh_title',`Unfavorite ${gameConfig.Girl}`)
-                            $fav_girl.children(0).attr('src',`https://${cdnHost}/design/ic_star_orange.svg`)
-                            girlInfo.fav = true
-                        }
-                        fav = !fav
-                        lsSet('WaifuInfo',waifuInfo)
-                    })
-
-                    $waifu_mode.click(() => {
-                        if (mode == 'All') {
-                            $waifu_mode.attr('hh_title',`Mode: Favorite ${gameConfig.Girl}s`)
-                            $waifu_mode.children(0).attr('src',`https://${cdnHost}/pictures/design/clubs/ic_Girls_S.png`)
-                            mode = 'Favorite'
-                        } else {
-                            $waifu_mode.attr('hh_title',`Mode: All ${gameConfig.Girl}s`)
-                            $waifu_mode.children(0).attr('src',`https://${cdnHost}/pictures/design/harem.svg`)
-                            mode = 'All'
-                        }
-                        waifuInfo.mode = mode
-                        lsSet('WaifuInfo',waifuInfo)
-                    })
-
-                    $cycle_waifu.click(() => {
-                        $cycle_waifu.attr('hh_title',cycle? `Cycle ${gameConfig.waifu}` : 'Pause Cycle')
-                        $cycle_waifu.css('font-size',cycle? '0px' : '24px')
-                        $('.cycle-waifu img').css('display',cycle? 'inherit' : 'none')
-                        cycle = !cycle
-                        waifuInfo.cycle = cycle
-                        lsSet('WaifuInfo',waifuInfo)
-                    })
-
-                    $random_waifu.click(() => {
-                        ids = this.getIds(waifuInfo, mode)
-                        let temp_id = girl_id
-                        if (ids.length == 1) {
-                            temp_id = ids[0]
-                        } else {
-                            while (temp_id == girl_id) {
-                                temp_id = ids[Math.floor(Math.random()*ids.length)]
-                            }
-                        }
-                        girl_id = temp_id
-                        dictGirl = girlDict.get(girl_id)
-                        if (!dictGirl) {console.log("Improved Waifu WARNING: Missing max grade info, please visit the harem page."); return}
-                        girlInfo = waifuInfo.girls[girl_id]
-                        if (!girlInfo) {console.log("Improved Waifu WARNING: Missing unlocked grade info, please visit the harem page."); return}
-                        unlocked_grade = girlInfo.unlocked
-                        max_grade = dictGirl.grade || unlocked_grade
-                        selected_grade = girlInfo.grade === undefined ? Math.min(max_grade, unlocked_grade) : girlInfo.grade
-                        fav = girlInfo.fav || false
-                        start = {x:0, y:0}
-                        try {scale = girlInfo.pose[selected_grade].scale || 1} catch {scale = 1}
-                        try {x = girlInfo.pose[selected_grade].x || 0} catch {x = 0}
-                        try {y = girlInfo.pose[selected_grade].y || 0} catch {y = 0}
-                        cord = {x: x, y: y}
-
-                        $('.waifu-container>img').eq(0).attr('src',`https://${cdnHost}/pictures/girls/${girl_id}/ava${selected_grade}.png`)
-                        setTransform();
-                        $('.girls-name a').eq(0).text(dictGirl.name)
-                        $('.diamond').each(function (index) {
-                            index == selected_grade ? $(this).addClass('selected') : $(this).removeClass('selected')
-                            if (index <= unlocked_grade) {
-                                $(this).addClass ('unlocked')
-                                $(this).removeClass ('locked')
-                            } else {
-                                $(this).addClass ('locked')
-                                $(this).removeClass ('unlocked')
-                            }
-                            index > max_grade ? $(this).addClass ('hide') : $(this).removeClass ('hide')
-                        })
-                        if (editing) {
-                            $(".waifu-edit div").toggleClass("hide")
-                            editing = false
-                        }
-                        if (fav) {
-                            $fav_girl.attr('hh_title',`Unfavorite ${gameConfig.Girl}`)
-                            $fav_girl.children(0).attr('src',`https://${cdnHost}/design/ic_star_orange.svg`)
-                        } else {
-                            $fav_girl.attr('hh_title',`Favorite ${gameConfig.Girl}`)
-                            $fav_girl.children(0).attr('src',`https://${cdnHost}/design/ic_star_white.svg`)
-                        }
-
-                        waifuInfo.girl_id = girl_id
-                        lsSet('WaifuInfo', waifuInfo)
-                    })
-
-                    $('.promo_discount').remove()
-                    $('#blog_button').remove()
-
-                    sheet.insertRule(`
-                    .hide {
-                        display: none!important;
-                    }`);
-                    sheet.insertRule(`
-                    .waifu-container {
-                        z-index: 1;
-                        margin-top: 0px;
-                        left: 15px;
-                    }`)
-                    sheet.insertRule(`
-                    .waifu-buttons-container {
-                        z-index: 2;
-                        width: 70px;
-                    }`);
-                    sheet.insertRule(`
-                    .info-container {
-                        z-index: 1;
-                    }`)
-                    sheet.insertRule(`
-                    .waifu-buttons-container .diamond-bar {
-                        right: 90px;
-                        width: 240px;
-                        display: flex;
-                        justify-content: center;
-                    }`);
-                    sheet.insertRule(`
-                    .waifu-buttons-container .girls-name {
-                        position: absolute;
-                        bottom: 26px;
-                        line-height: 18px;
-                        text-align: center;
-                        text-shadow: 2px 2px 5px black;
-                    }`);
-                    sheet.insertRule(`
-                    .girls-name a {
-                        color: white;
-                        text-decoration: none;
-                    }`);
-                    sheet.insertRule(`
-                    .girls-name img {
-                        width: 16px;
-                        height: 16px;
-                        margin-left: 5px;
-                        margin-bottom: 2px;
-                        filter: drop-shadow(2px 2px 3px black);
-                    }`);
-                    sheet.insertRule(`
-                    .waifu-buttons-container .round_blue_button {
-                        width: 32px;
-                        height: 32px;
-                    }`);
-                    sheet.insertRule(`
-                    .waifu-buttons-container .round_blue_button img {
-                        width: 20px;
-                        height: 20px;
-                    }`);
-                    sheet.insertRule(`
-                    .waifu-edit {
-                        position: absolute;
-                        bottom: 36px;
-                        display: grid;
-                        gap: 5px;
-                    }`);
-                    sheet.insertRule(`
-                    .round_blue_button.save-pose img {
-                        height: 15px;
-                    }`);
-                    sheet.insertRule(`
-                    .waifu-right {
-                        position: absolute;
-                        left: 38px;
-                        bottom: 0px;
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        grid-gap: 5px;
-                    }`);
-                } else if (currentPage.includes('waifu.html')) {
-                    let waifuInfo = lsGet('WaifuInfo')
-                    if (!waifuInfo) {return}
-                    let favs = this.getIds(waifuInfo, 'Favorite', true)
-
-                    $('.harem-girl-container').each(function() {
-                        let id = $(this).attr('id_girl')
-                        let fav = favs.includes(id)
-                        $(this).children().last().replaceWith(`<div class="fav-girl" fav=${fav}><img src="https://${cdnHost}/design/ic_star_${fav? 'orange' : 'white'}.svg"></div>`)
-                        let $fav_button = $(this).children().last()
-                        $fav_button.click(() => {
-                            let fav = $fav_button.attr('fav') === 'true'
-                            $fav_button.children().attr('src',`https://${cdnHost}/design/ic_star_${fav? 'orange' : 'white'}.svg`)
-                            $fav_button.attr('fav', !fav)
-                            fav? waifuInfo.girls[id].fav = true : delete waifuInfo.girls[id].fav
-                            lsSet('WaifuInfo', waifuInfo)
-                        })
-                    })
-
-                    HHPlusPlus.Helpers.onAjaxResponse(/action=waifu_select/i, (response, opt) => {
-                        const searchParams = new URLSearchParams(opt.data)
-                        const id_girl = searchParams.get('id_girl')
-
-                        waifuInfo.individual = true
-                        lsSet('WaifuInfo', waifuInfo)
-                    })
-
-                    sheet.insertRule(`
-                    .fav-girl img {
-                        width: 20px;
-                        height: 20px;
-                    }`);
-                    sheet.insertRule(`
-                    .fav-girl {
-                        margin-top: 9px;
-                    }`);
-                } else {
-                    // harem data collection
-                    let waifuInfo = lsGet('WaifuInfo') || {girls:{}}
-                    Object.entries(girlsDataList).forEach(([girlId, girl]) => {
-                        if (girl.own) {
-                            let unlocked_grade = (girl.graded2.match(/\<g \>/g) || []).length;
-                            if (waifuInfo.girls[girlId]) {
-                                waifuInfo.girls[girlId].unlocked = unlocked_grade
-                            } else {
-                                waifuInfo.girls[girlId] = {unlocked: unlocked_grade}
-                            }
-                        }
-                    })
-                    lsSet('WaifuInfo', waifuInfo)
-                }
             })
 
             this.hasRun = true
@@ -2923,15 +2244,374 @@
         }
     }
 
+    class VillainDrops extends HHModule {
+        constructor () {
+            const baseKey = 'VillainDrops'
+            const configSchema = {
+                baseKey,
+                default: false,
+                label: `Villain Drops Recorder`
+            }
+            super({name: baseKey, configSchema})
+        }
+
+        shouldRun () {
+            return currentPage.includes('/troll-battle.html') || currentPage.includes('/troll-pre-battle.html')
+        }
+
+        run () {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            $(document).ready(() => {
+                const game_girl_nums = {
+                    HH: {
+                        8: 1,
+                        9: 2,
+                        10: 3,
+                        14: 1,
+                        13: 2,
+                        12: 3,
+                        19: 1,
+                        16: 2,
+                        18: 3,
+                        29: 1,
+                        28: 2,
+                        26: 3,
+                        39: 1,
+                        40: 2,
+                        41: 3,
+                        64: 1,
+                        63: 2,
+                        31: 3,
+                        85: 1,
+                        86: 2,
+                        84: 3,
+                        114: 1,
+                        115: 2,
+                        116: 3,
+                        1247315: 1,
+                        4649579: 2,
+                        7968301: 3,
+                        1379661: 1,
+                        4479579: 2,
+                        1800186: 3,
+                        24316446: 1,
+                        219651566: 2,
+                        501847856: 3,
+                        225365882: 1,
+                        478693885: 2,
+                        231765083: 3,
+                        86962133: 1,
+                        243793871: 2,
+                        284483399: 3,
+                        612527302: 1,
+                        167231135: 2,
+                        560979916: 3,
+                        784911160: 4,
+                        549524850: 5,
+                        184523411: 6,
+                        164866290: 1,
+                        696124016: 2,
+                        841591253: 3,
+                        851893423: 1,
+                        735302216: 2,
+                        344730128: 3
+                    },
+                    GH: {
+                        8: 1,
+                        9: 2,
+                        10: 3,
+                        14: 1,
+                        13: 2,
+                        12: 3,
+                        19: 1,
+                        16: 2,
+                        18: 3,
+                        29: 1,
+                        28: 2,
+                        26: 3,
+                        39: 1,
+                        40: 2,
+                        41: 3,
+                        64: 1,
+                        63: 2,
+                        31: 3,
+                        85: 1,
+                        86: 2,
+                        84: 3,
+                        114: 1,
+                        115: 2,
+                        116: 3,
+                        1247315: 1,
+                        4649579: 2,
+                        7968301: 3,
+                        1379661: 1,
+                        4479579: 2,
+                        1800186: 3,
+                        24316446: 1,
+                        219651566: 2,
+                        501847856: 3,
+                        225365882: 1,
+                        478693885: 2,
+                        231765083: 3,
+                        86962133: 1,
+                        243793871: 2,
+                        284483399: 3,
+                        612527302: 1,
+                        167231135: 2,
+                        560979916: 3,
+                        784911160: 4,
+                        549524850: 5,
+                        184523411: 6,
+                        164866290: 1,
+                        696124016: 2,
+                        841591253: 3,
+                        851893423: 1,
+                        735302216: 2,
+                        344730128: 3
+                    },
+                    CxH: {
+                        830009523: 1,
+                        907801218: 2,
+                        943323021: 3,
+                        271746999: 1,
+                        303805209: 2,
+                        701946373: 3,
+                        943255266: 1,
+                        977228200: 2,
+                        743748788: 3,
+                        514994766: 1,
+                        140401381: 2,
+                        232860230: 3,
+                        623293037: 1,
+                        764791769: 2,
+                        801271903: 3,
+                        921365371: 1,
+                        942523553: 2,
+                        973271744: 3,
+                        364639341: 1,
+                        879781833: 2,
+                        895546748: 3
+                    },
+                    PSH: {
+                        973280579: 1,
+                        795788039: 2,
+                        261345306: 3,
+                        833308213: 1,
+                        658322339: 2,
+                        482529771: 3,
+                        117837840: 1,
+                        160370794: 2,
+                        306287449: 3,
+                        828011942: 4,
+                        564593641: 1,
+                        719705773: 2,
+                        934421949: 3,
+                        270611414: 1,
+                        464811282: 2,
+                        781232070: 3,
+                        219241809: 1,
+                        380385497: 2,
+                        879198752: 3,
+                        165066536: 1,
+                        734325005: 2,
+                        805020628: 3,
+                        191661045: 1,
+                        369105612: 2,
+                        665836932: 3
+                    },
+                    HoH: {
+                        8: 1,
+                        9: 2,
+                        10: 3,
+                        14: 1,
+                        13: 2,
+                        12: 3,
+                        19: 1,
+                        16: 2,
+                        18: 3,
+                        29: 1,
+                        28: 2,
+                        26: 3
+                    }
+                }
+                const girl_nums = game_girl_nums[HHPlusPlus.Helpers.getGameKey()]
+                const {opponent_fighter} = window
+                let villain_level = parseInt(opponent_fighter.player ? opponent_fighter.player.level : $('.new-battle-opponent .hero-level-indicator').text())
+                const first_gems = ['fire', 'darkness', 'psychic', 'nature']
+
+                HHPlusPlus.Helpers.onAjaxResponse(/action=do_battles_trolls/, (response, opt) => {
+                    const searchParams = new URLSearchParams(opt.data)
+                    const number_of_battles = parseInt(searchParams.get('number_of_battles'))
+                    const isMulti = number_of_battles > 1
+                    const id_opponent = searchParams.get('id_opponent')
+                    let drop_lists = lsGet('VillainDrops') || {}
+                    if (!drop_lists.hasOwnProperty(id_opponent)) {
+                        drop_lists[id_opponent] = []
+                    }
+                    let rewards_left = number_of_battles
+
+                    if ('rewards' in response.rewards.data) {
+                        response.rewards.data.rewards.forEach((reward) => {
+                            const type = reward.type
+                            const count = parseInt(type == 'item' ? reward.value.quantity : reward.value.match(/[\d.,]+/g).at(-1).replace(/,/g, ''))
+                            let drop_count = isMulti ? count : 1
+                            let reward_key = ''
+
+                            if (type == 'item') {
+                                const item = reward.value.item
+                                reward_key = `${item.identifier}${item.rarity[0].toUpperCase()}`
+                            } else if (type == 'gems') {
+                                const gem_count = id_opponent < 5 ? 15 : id_opponent < 13 ? 20 : 25
+                                const gem_type = reward.value.match(/(?<=gems\/).*?(?=\.png)/g)[0]
+                                if (isMulti) {drop_count = count/gem_count}
+                                reward_key = `G${gem_count == 15 ? first_gems.includes(gem_type) ? 1 : 2 : ''}`
+                            } else if (type == 'soft_currency') {
+                                if (isMulti) {
+                                    const club_info = lsGet('ClubStatus', 'HHPlusPlus') || {'upgrades': {'soft_currency_gain': {'bonus': 0}}}
+                                    const sc_bonus = 1 + club_info.upgrades.soft_currency_gain.bonus
+                                    //console.log(response)
+                                    const {Hero} = window
+                                    const sc_count = parseInt(response.rewards.heroChangesUpdate.currency.soft_currency) - parseInt(Hero.currencies.soft_currency)
+                                    //console.log(response.rewards.heroChangesUpdate.soft_currency)
+                                    //console.log(Hero.currencies.soft_currency)
+                                    //console.log(sc_count)
+                                    const sc_per = (villain_level*100 + 500) * sc_bonus
+                                    //console.log(sc_per)
+                                    drop_count = Math.round(sc_count/sc_per) // round to be safe
+                                }
+                                reward_key = 'Y'
+                            } else if (type == 'orbs') {
+                                if (reward.value.includes('o_m1')) {
+                                    reward_key = 'M'
+                                } else {
+                                    reward_key = 'O'
+                                }
+                            } else if (type == 'ticket') {
+                                reward_key = 'T'
+                            } else if (type == 'progressions') {
+                                if (reward.value.includes('type_progression_sm')) {
+                                    reward_key = 'K'
+                                } else {
+                                    console.log(reward)
+                                }
+                            } else {
+                                console.log(count)
+                                console.log(reward)
+                            }
+
+                            rewards_left -= drop_count
+                            const reward_keys = Array(drop_count).fill(reward_key)
+                            drop_lists[id_opponent] = drop_lists[id_opponent].concat(reward_keys)
+                        })
+                    }
+                    if ('shards' in response.rewards.data) {
+                        let reward_keys = []
+                        const girls = response.rewards.data.shards.length
+
+                        if (girls == 1) {
+                            const reward = response.rewards.data.shards[0]
+                            const girl_num = reward.id_girl in girl_nums ? girl_nums[reward.id_girl] : ''
+                            const shards = reward.value-reward.previous_value
+
+                            if (rewards_left == 1) { // best case: one girl and one drop
+                                reward_keys.push(`S${girl_num}-${shards}`)
+                            } else { // shard amount for each drop could be unkown
+                                let shard_counts = Array(rewards_left)
+
+                                if (shards - 1 <= rewards_left) {
+                                    shard_counts.fill(1)
+                                    shard_counts[0] += shards - rewards_left
+                                } else if (reward.rarity == 'mythic') {
+                                    shard_counts.fill(1)
+                                    for (let i=0;i<(shards-rewards_left);i++) {
+                                        shard_counts[i] += 1
+                                    }
+                                } else { // shard counts can't be determined per drop
+                                    shard_counts.fill(0)
+                                    shard_counts[rewards_left-1] = shards
+                                }
+
+                                shard_counts.forEach((count) => {
+                                    reward_keys.push(`S${girl_num}-${count!=0 ? count : '?'}`)
+                                })
+                            }
+                        } else {
+                            // This is going to be messy
+                            if (girls == rewards_left) { // best case: one drop for each girl
+                                response.rewards.data.shards.forEach((reward) => {
+                                    const girl_num = reward.id_girl in girl_nums ? girl_nums[reward.id_girl] : ''
+                                    const shards = reward.value-reward.previous_value
+
+                                    reward_keys.push(`S${girl_num}-${shards}`)
+                                })
+                            } else {
+                                let total_shards = 0
+
+                                response.rewards.data.shards.forEach((reward) => {
+                                    const girl_num = reward.id_girl in girl_nums ? girl_nums[reward.id_girl] : ''
+                                    const shards = reward.value-reward.previous_value
+                                })
+                            }
+                        }
+
+                        drop_lists[id_opponent] = drop_lists[id_opponent].concat(reward_keys)
+                    }
+
+                    lsSet('VillainDrops', drop_lists)
+                })
+
+                if (currentPage.includes('/troll-pre-battle.html')) {
+                    const searchParams = new URLSearchParams(location.search)
+                    const id_opponent = searchParams.get('id_opponent')
+                    let drop_lists = lsGet('VillainDrops') || {}
+
+                    if (drop_lists.hasOwnProperty(id_opponent)) {
+                        const drop_list = drop_lists[id_opponent]
+                        $('.opponent_rewards>span').wrap('<div class="gridWrapper"></div>')
+                            .before(`<span class="copy"><img tooltip hh_title="Copy Drop Log (${drop_list.length})" src="https://hh.hh-content.com/design/ic_books_gray.svg"></span>`)
+                            .after(`<span class="reset"><img tooltip hh_title="Reset Drop Log" src="https://hh.hh-content.com/caracs/no_class.png"></span>`)
+                        $('.opponent_rewards .copy').click(() => {
+                            copyText(drop_list.join('\n'))
+                        })
+                        $('.opponent_rewards .reset').click(() => {
+                            copyText(drop_list.join('\n'))
+                            delete drop_lists[id_opponent]
+                            lsSet('VillainDrops', drop_lists)
+                            $('.opponent_rewards .copy, .opponent_rewards .reset').remove()
+                            $('.gridWrapper>span').unwrap()
+                        })
+                    }
+
+                    sheet.insertRule(`
+                    .opponent_rewards .gridWrapper {
+                        grid-template-columns: 1fr 1fr 1fr!important;
+                    }`)
+                    sheet.insertRule(`
+                    .opponent_rewards .copy>img {
+                        width: 20px;
+                        height: 28px;
+                    }`)
+                    sheet.insertRule(`
+                    .opponent_rewards .reset>img {
+                        width: 28px;
+                        height: 28px;
+                    }`)
+                }
+            })
+
+            this.hasRun = true
+        }
+    }
+
     const allModules = [
-        new DailyMissionsRestyle(),
         new GirlDataRecord(),
         new LeagueDataCollector(),
-        new ImprovedWaifu(),
         new PachinkoLog(),
         new CopyContests(),
         new MarketTweaks(),
-        new HaremTweaks()
+        new HaremTweaks(),
+        new VillainDrops()
     ]
 
     setTimeout(() => {
