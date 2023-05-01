@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.0
+// @version         0.6.1
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -19,6 +19,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.1: Changed Villain Drops Recorder shard drop notation and handling
 // 0.6.0: Migrated Improved Waifu and Compact Daily Missions into HH++, and added Villain Drops Recorder (off by default)
 // 0.5.10: Fixing copy league buttons and adjusting Improved Waifu placement
 // 0.5.9: Fixed error with Improved Waifu and animated girl
@@ -2263,179 +2264,6 @@
             if (this.hasRun || !this.shouldRun()) {return}
 
             $(document).ready(() => {
-                const game_girl_nums = {
-                    HH: {
-                        8: 1,
-                        9: 2,
-                        10: 3,
-                        14: 1,
-                        13: 2,
-                        12: 3,
-                        19: 1,
-                        16: 2,
-                        18: 3,
-                        29: 1,
-                        28: 2,
-                        26: 3,
-                        39: 1,
-                        40: 2,
-                        41: 3,
-                        64: 1,
-                        63: 2,
-                        31: 3,
-                        85: 1,
-                        86: 2,
-                        84: 3,
-                        114: 1,
-                        115: 2,
-                        116: 3,
-                        1247315: 1,
-                        4649579: 2,
-                        7968301: 3,
-                        1379661: 1,
-                        4479579: 2,
-                        1800186: 3,
-                        24316446: 1,
-                        219651566: 2,
-                        501847856: 3,
-                        225365882: 1,
-                        478693885: 2,
-                        231765083: 3,
-                        86962133: 1,
-                        243793871: 2,
-                        284483399: 3,
-                        612527302: 1,
-                        167231135: 2,
-                        560979916: 3,
-                        784911160: 4,
-                        549524850: 5,
-                        184523411: 6,
-                        164866290: 1,
-                        696124016: 2,
-                        841591253: 3,
-                        851893423: 1,
-                        735302216: 2,
-                        344730128: 3
-                    },
-                    GH: {
-                        8: 1,
-                        9: 2,
-                        10: 3,
-                        14: 1,
-                        13: 2,
-                        12: 3,
-                        19: 1,
-                        16: 2,
-                        18: 3,
-                        29: 1,
-                        28: 2,
-                        26: 3,
-                        39: 1,
-                        40: 2,
-                        41: 3,
-                        64: 1,
-                        63: 2,
-                        31: 3,
-                        85: 1,
-                        86: 2,
-                        84: 3,
-                        114: 1,
-                        115: 2,
-                        116: 3,
-                        1247315: 1,
-                        4649579: 2,
-                        7968301: 3,
-                        1379661: 1,
-                        4479579: 2,
-                        1800186: 3,
-                        24316446: 1,
-                        219651566: 2,
-                        501847856: 3,
-                        225365882: 1,
-                        478693885: 2,
-                        231765083: 3,
-                        86962133: 1,
-                        243793871: 2,
-                        284483399: 3,
-                        612527302: 1,
-                        167231135: 2,
-                        560979916: 3,
-                        784911160: 4,
-                        549524850: 5,
-                        184523411: 6,
-                        164866290: 1,
-                        696124016: 2,
-                        841591253: 3,
-                        851893423: 1,
-                        735302216: 2,
-                        344730128: 3
-                    },
-                    CxH: {
-                        830009523: 1,
-                        907801218: 2,
-                        943323021: 3,
-                        271746999: 1,
-                        303805209: 2,
-                        701946373: 3,
-                        943255266: 1,
-                        977228200: 2,
-                        743748788: 3,
-                        514994766: 1,
-                        140401381: 2,
-                        232860230: 3,
-                        623293037: 1,
-                        764791769: 2,
-                        801271903: 3,
-                        921365371: 1,
-                        942523553: 2,
-                        973271744: 3,
-                        364639341: 1,
-                        879781833: 2,
-                        895546748: 3
-                    },
-                    PSH: {
-                        973280579: 1,
-                        795788039: 2,
-                        261345306: 3,
-                        833308213: 1,
-                        658322339: 2,
-                        482529771: 3,
-                        117837840: 1,
-                        160370794: 2,
-                        306287449: 3,
-                        828011942: 4,
-                        564593641: 1,
-                        719705773: 2,
-                        934421949: 3,
-                        270611414: 1,
-                        464811282: 2,
-                        781232070: 3,
-                        219241809: 1,
-                        380385497: 2,
-                        879198752: 3,
-                        165066536: 1,
-                        734325005: 2,
-                        805020628: 3,
-                        191661045: 1,
-                        369105612: 2,
-                        665836932: 3
-                    },
-                    HoH: {
-                        8: 1,
-                        9: 2,
-                        10: 3,
-                        14: 1,
-                        13: 2,
-                        12: 3,
-                        19: 1,
-                        16: 2,
-                        18: 3,
-                        29: 1,
-                        28: 2,
-                        26: 3
-                    }
-                }
-                const girl_nums = game_girl_nums[HHPlusPlus.Helpers.getGameKey()]
                 const {opponent_fighter} = window
                 let villain_level = parseInt(opponent_fighter.player ? opponent_fighter.player.level : $('.new-battle-opponent .hero-level-indicator').text())
                 const first_gems = ['fire', 'darkness', 'psychic', 'nature']
@@ -2511,7 +2339,7 @@
 
                         if (girls == 1) {
                             const reward = response.rewards.data.shards[0]
-                            const girl_num = reward.id_girl in girl_nums ? girl_nums[reward.id_girl] : ''
+                            const girl_num = reward.id_girl
                             const shards = reward.value-reward.previous_value
 
                             if (rewards_left == 1) { // best case: one girl and one drop
@@ -2540,17 +2368,23 @@
                             // This is going to be messy
                             if (girls == rewards_left) { // best case: one drop for each girl
                                 response.rewards.data.shards.forEach((reward) => {
-                                    const girl_num = reward.id_girl in girl_nums ? girl_nums[reward.id_girl] : ''
+                                    const girl_num = reward.id_girl
                                     const shards = reward.value-reward.previous_value
 
                                     reward_keys.push(`S${girl_num}-${shards}`)
                                 })
-                            } else {
+                            } else { // worst case: shard drops > # of girls, can't determine how many drops for each girl or shards for each drop
                                 let total_shards = 0
 
+                                for (let i=0;rewards_left-girls;i++) {
+                                    reward_keys.push('S?-?')
+                                }
+
                                 response.rewards.data.shards.forEach((reward) => {
-                                    const girl_num = reward.id_girl in girl_nums ? girl_nums[reward.id_girl] : ''
+                                    const girl_num = reward.id_girl
                                     const shards = reward.value-reward.previous_value
+
+                                    reward_keys.push(`S${girl_num}-${shards}`)
                                 })
                             }
                         }
