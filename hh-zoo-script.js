@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.1
+// @version         0.6.2
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -19,6 +19,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.2: Pachinko log updated for equipment pachinko
 // 0.6.1: Changed Villain Drops Recorder shard drop notation and handling
 // 0.6.0: Migrated Improved Waifu and Compact Daily Missions into HH++, and added Villain Drops Recorder (off by default)
 // 0.5.10: Fixing copy league buttons and adjusting Improved Waifu placement
@@ -1014,7 +1015,8 @@
                     E: "equips",
                     g: "girls",
                     G: "gems",
-                    F: "frames"
+                    F: "frames",
+                    e: "girlEquips"
                 },
                 rarity: {
                     C: "Common",
@@ -1051,14 +1053,14 @@
                     if (time > time_start && time < time_end) {
                         drops.slice(pachinko_type != 'great'? 1 : 2).forEach((item) => {
                             let type = this.reward_keys.type[item[0]]
-                            if (type == 'equips') {
+                            if (['equips', 'girlEquips'].includes(type)) {
                                 const e_rarity = item.match(/\D+/g)[1][0]
-                                if (e_rarity != 'L') {
+                                if (e_rarity != 'L' || type === 'girlEquips') {
                                     item = e_rarity
                                 } else {
                                     item = item.match(/\D+\d+/g)[1]
                                 }
-                                item = 'E'+item
+                                item = `${type == 'equips'? 'E' : 'e'}${item}`
                             }
                             if (type == 'girls') {item = 'g'}
                             summary[type]? summary[type].total++ : summary[type] = {total:1}
@@ -1084,7 +1086,7 @@
             let no_girls = type_info.slice(-2) == 'ng' ? true : false
             let rewards = games>1? (type!='event'&&(!no_girls || type=='great'))? games-1 : games : 1
             let reward_keys = this.reward_keys
-            const no_girls_summary = no_girls || (games>1 && (type!='great' && type!='event')) || (games==1 && type=='great')
+            const no_girls_summary = no_girls || (games>1 && (type!='great' && type!='event')) || (games==1 && type=='great') || (type=='equipment')
             const no_mythic_equip_summary = !((summary.time_start == this.pool_updates[0].time) && ((type == 'mythic' && games == 1) || (type == 'event')))
 
             function getPct(item) {
@@ -1107,14 +1109,14 @@
                         <img alt="Reset ${gameConfig.pachinko} Log" tooltip hh_title="Reset ${gameConfig.pachinko} Log" src="https://${cdnHost}/caracs/no_class.png">
                     </span>
                     <h1>${capFirst(type)}-${games}-${games>1? 'Games' : 'Game'}${no_girls? ' - No-Girls' : ''}</h1>
-                    <span class="sample-count orb_icon o_${type!='event'? type[0] : 'v'}${games}" tooltip hh_title="Sample Size">${summary.total}</span>
+                    <span class="sample-count orb_icon o_${!['event', 'equipment'].includes(type)? type[0] : type=='event'? 'v' : 'eq'}${games}" tooltip hh_title="Sample Size">${summary.total}</span>
                     <span class="log-button record-log" pachinko="${type_info}" start="${summary.time_start}" end="${summary.time_end}">
                         <img alt="Copy ${gameConfig.pachinko} Log" tooltip hh_title="Copy ${gameConfig.pachinko} Log" src="https://${cdnHost}/design/ic_books_gray.svg">
                     </span>
                 </div>
                 <div class="summary-body ${type}">
                     <span>${rewards>1? rewards : ''} Random ${games>1? 'Rewards' : 'Reward'}${(type == 'great' && games == 10)? ' + 1 Legendary Equip' : ''}</span>
-                    ${type == 'great'? '' :
+                    ${['great', 'equipment'].includes(type)? '' :
                     `<span>+</span>
                     <span>${type == 'mythic'? games == '1'? '10': games == '3'? '10 Shards and<br>30' : '25 Shards and<br>60' : type == 'event'? '70' : ''}
                           ${type == 'epic'? games == '1'? `${isHH? '1 Frame and ' : ''}50`: `1 Girl${isHH? ', 10 Frames,' : ''} and<br> 200` : ''} Gems</span>`}
@@ -1136,7 +1138,7 @@
                                 </li>
                             </ul>`}
                         </div>`}
-                        ${type == 'event'? '' :
+                        ${['event', 'equipment'].includes(type)? '' :
                         `<div class="summary-div">
                             ${type != 'great'? '' :
                             `<div class="side-sum-container">
@@ -1209,7 +1211,7 @@
                                 </li>
                             </ul>`}`}
                         </div>`}
-                        ${type == 'mythic'? '' :
+                        ${['mythic', 'equipment'].includes(type)? '' :
                         `<div class="summary-div">
                             ${type != 'great'? '' :
                             `<div class="side-sum-container">
@@ -1282,7 +1284,7 @@
                                 </li>
                             </ul>`}`}
                         </div>`}
-                        ${type == 'event' || type == 'great' || (type == 'epic' && games == '1')? '' :
+                        ${['event', 'great', 'equipment'].includes(type) || (type == 'epic' && games == '1')? '' :
                         `<div class="summary-div">
                             <div class="side-sum-container">
                                 ${getPct('Brarity-L')}
@@ -1308,7 +1310,7 @@
                         </div>`}
                         ${type == 'mythic' || (type =='epic' && games == '1')? '' :
                         `<div class="summary-div">
-                            ${(type != 'great' || (Hero.infos.level<100 && games == '1'))? '' :
+                            ${!((type == 'great' && (Hero.infos.level>=100 && games == '1' || games == '10')) || (type == 'equipment'))? '' :
                             `<div class="side-sum-container">
                                 ${getPct('E')}
                             </div>`}
@@ -1359,9 +1361,55 @@
                                     ${getPct('ER')}
                                 </li>
                             </ul>`}`}
+                            ${type != 'equipment'? '' :
+                            `<div class="side-sum-container">
+                                ${getPct('Erarity-M')}
+                            </div>
+                            <ul class="summary-grid equips-summary mythic">
+                                <li>
+                                    <img alt="Mythic Equip" tooltip hh_title="Mythic Equip" src="https://${cdnHost}/design/mythic_equipment/mythic_equipment.png">
+                                    ${getPct('EM')}
+                                </li>
+                            </ul>`}
+                        </div>`}
+                        ${type != 'equipment'? '' : `
+                        <div class="summary-div">
+                            <div class="side-sum-container">
+                                ${getPct('e')}
+                            </div>
+                            <ul class="summary-grid equips-summary common">
+                                <li>
+                                    <img alt="Common Girl Equip" tooltip hh_title="Common Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    ${getPct('eC')}
+                                </li>
+                            </ul>
+                            <ul class="summary-grid equips-summary rare">
+                                <li>
+                                    <img alt="Rare Girl Equip" tooltip hh_title="Rare Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    ${getPct('eR')}
+                                </li>
+                            </ul>
+                            <ul class="summary-grid equips-summary epic">
+                                <li>
+                                    <img alt="Epic Girl Equip" tooltip hh_title="Epic Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    ${getPct('eE')}
+                                </li>
+                            </ul>
+                            <ul class="summary-grid equips-summary legendary">
+                                <li>
+                                    <img alt="Legendary Girl Equip" tooltip hh_title="Legendary Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    ${getPct('eL')}
+                                </li>
+                            </ul>
+                            <ul class="summary-grid equips-summary mythic">
+                                <li>
+                                    <img alt="Mythic Girl Equip" tooltip hh_title="Mythic Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    ${getPct('eM')}
+                                </li>
+                            </ul>
                         </div>`}
                     </div>
-                    ${type == 'great'? '' :
+                    ${['great', 'equipment'].includes(type)? '' :
                     `<span></span>
                     <ul class="summary-grid gems-summary">
                         <li>
@@ -1664,6 +1712,10 @@
                     color: #0bff08;
                 }`);
                 sheet.insertRule(`
+                .pachinko-summary.equipment h1 {
+                    color: #e02dc8;
+                }`);
+                sheet.insertRule(`
                 .summary-header img {
                     width: 32px;
                     height: 32px;
@@ -1684,6 +1736,10 @@
                 }`);
                 sheet.insertRule(`
                 .summary-body.great {
+                    grid-template-columns: 1fr;
+                }`);
+                sheet.insertRule(`
+                .summary-body.equipment {
                     grid-template-columns: 1fr;
                 }`);
                 sheet.insertRule(`
@@ -1737,8 +1793,12 @@
                     height: 40px;
                 }`);
                 sheet.insertRule(`
+                .summary-grid.mythic img {
+                    background: transparent radial-gradient(closest-side at 50% 50%,#f5a866 0,#ec0039 51%,#9e0e27 100%) 0 0 no-repeat padding-box;
+                }`);
+                sheet.insertRule(`
                 .summary-grid.legendary img {
-                    background-image: url(https://sh.hh-content.com/legendary.png);
+                    background-image: url(https://${cdnHost}/legendary.png);
                     background-size: contain;
                     background-color: #9150bf;
                 }`);
@@ -1749,6 +1809,10 @@
                 sheet.insertRule(`
                 .summary-grid.rare img {
                     background: #23b56b;
+                }`);
+                sheet.insertRule(`
+                .summary-grid.common img {
+                    background: #8d8e9f;
                 }`);
                 sheet.insertRule(`
                 .equips-summary.legendary {
@@ -1772,6 +1836,7 @@
                     align-self: start;
                 }`);
 
+                // record pachinko drops
                 const elm_abrv = {
                     'darkness': 'Do',
                     'light': 'Su',
@@ -1788,7 +1853,7 @@
                     const type = pachinko.type
                     const games = searchParams.get('how_many')
                     const rewards = response.rewards.data
-                    const plist = `${type}${games}${(no_girls[type] && !(type == 'great' && games == 1))? 'ng': ''}`
+                    const plist = `${type}${games}${(no_girls[type] && !(type == 'great' && games == 1) && (type !== 'equipment'))? 'ng': ''}`
                     let pachinko_log = lsGet('PachinkoLog') || {}
                     if(!pachinko_log[plist]) {pachinko_log[plist] = [];}
                     let roll = [new Date().getTime()]
@@ -1831,6 +1896,22 @@
                         } else if (reward.type == 'gems'){
                             const gem = $(reward.value).attr('src').match(/(?<=gems\/)(.+)(?=\.png)/g)[0]
                             roll.push(`G${elm_abrv[gem]}`)
+                        } else if (reward.type == 'girl_armor') {
+                            const equip_info = reward.value
+                            const rarity = equip_info.rarity[0].toUpperCase()
+                            const identifier = equip_info.skin.identifier
+
+                            let equip = `e${identifier}${rarity}`
+                            if (equip_info.resonance_bonuses.class) {
+                                equip += equip_info.resonance_bonuses.class.identifier
+                            }
+                            if (equip_info.resonance_bonuses.element) {
+                                equip += elm_abrv[equip_info.resonance_bonuses.element.identifier]
+                            }
+                            if (equip_info.resonance_bonuses.figure) {
+                                equip += equip_info.resonance_bonuses.figure.identifier
+                            }
+                            roll.push(equip)
                         }
                     })
 
