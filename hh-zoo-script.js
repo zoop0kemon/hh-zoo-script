@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.2
+// @version         0.6.3
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -19,6 +19,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.3: Pre-empting update for Pachinko Log, Villain Drops Recorder, and Harem Style Tweaks
 // 0.6.2: Pachinko log updated for equipment pachinko
 // 0.6.1: Changed Villain Drops Recorder shard drop notation and handling
 // 0.6.0: Migrated Improved Waifu and Compact Daily Missions into HH++, and added Villain Drops Recorder (off by default)
@@ -1894,7 +1895,7 @@
                         } else if (reward.type == 'frames') {
                             roll.push(`F${$(reward.value).text()}`)
                         } else if (reward.type == 'gems'){
-                            const gem = $(reward.value).attr('src').match(/(?<=gems\/)(.+)(?=\.png)/g)[0]
+                            const gem = reward.gem_type? reward.gem_type : $(reward.value).attr('src').match(/(?<=gems\/)(.+)(?=\.png)/g)[0]
                             roll.push(`G${elm_abrv[gem]}`)
                         } else if (reward.type == 'girl_armor') {
                             const equip_info = reward.value
@@ -1921,6 +1922,7 @@
 
                     pachinko_log[plist].push(roll.join(','))
                     lsSet('PachinkoLog', pachinko_log)
+                    this.attachLog()
                 })
             })
 
@@ -2280,22 +2282,21 @@
                     })
                     total_observer.observe($('.total-from-items')[0], {subtree: true, characterData: true})*/
 
-                    const fill_slots_girl = () => {
-                        $(".inventory").each(function () {
-                            const empty_fill = 20 - $(this).find('.inventory-slot').length
-                            if (empty_fill > 0) {
-                                $(this).append('<div class="inventory-slot empty-slot"><div class="slot"></div></div>'.repeat(empty_fill))
+
+                    ['experience', 'affection'].forEach((resource) => {
+                        const $inventory = $(`#${resource} .inventory`)
+
+                        const slot_observer = new MutationObserver(() => {
+                            const slots = $(`#${resource} .inventory-slot`).length
+                            if (slots && slots < 20) {
+                                const empty_fill = 20 - slots
+                                if (empty_fill) {
+                                    $inventory.append('<div class="inventory-slot empty-slot"><div class="slot"></div></div>'.repeat(empty_fill))
+                                }
                             }
                         })
-                    }
-
-                    fill_slots_girl()
-                    const slot_observer = new MutationObserver(() => {
-                        if ($('.inventory-slot').length < 40) {
-                            fill_slots_girl()
-                        }
+                        slot_observer.observe($inventory[0], {childList: true})
                     })
-                    slot_observer.observe($('.inventory')[0], {childList: true})
 
                     sheet.insertRule(`
                     div#tabs_switcher {
@@ -2311,7 +2312,7 @@
                         margin-bottom: 0.25rem;
                     }`)
                     sheet.insertRule(`
-                    .switch-tab-content .inventory {
+                    #experience .inventory, #affection .inventory {
                         grid-auto-flow: column;
                         grid-template-rows: auto auto auto auto;
                         height: 22.5rem;
@@ -2346,7 +2347,7 @@
 
             $(document).ready(() => {
                 const {opponent_fighter} = window
-                let villain_level = parseInt(opponent_fighter.player ? opponent_fighter.player.level : $('.new-battle-opponent .hero-level-indicator').text())
+                const villain_level = parseInt(opponent_fighter.player ? opponent_fighter.player.level : $('.new-battle-opponent .hero-level-indicator').text())
                 const first_gems = ['fire', 'darkness', 'psychic', 'nature']
 
                 HHPlusPlus.Helpers.onAjaxResponse(/action=do_battles_trolls/, (response, opt) => {
@@ -2363,35 +2364,38 @@
                     if ('rewards' in response.rewards.data) {
                         response.rewards.data.rewards.forEach((reward) => {
                             const type = reward.type
-                            const count = parseInt(type == 'item' ? reward.value.quantity : reward.value.match(/[\d.,]+/g).at(-1).replace(/,/g, ''))
+                            let temp_count = reward.value
+                            if (typeof temp_count !== 'number') {
+                                try {
+                                    temp_count = temp_count.match(/[\d.,]+/g).at(-1).replace(/,/g, '')
+                                } catch {
+                                    temp_count = temp_count.replace(/,/g, '')
+                                }
+                            }
+                            const count = parseInt(type == 'item' ? reward.value.quantity : temp_count)
                             let drop_count = isMulti ? count : 1
-                            let reward_key = ''
+                            let reward_key = '?'
 
                             if (type == 'item') {
                                 const item = reward.value.item
                                 reward_key = `${item.identifier}${item.rarity[0].toUpperCase()}`
                             } else if (type == 'gems') {
                                 const gem_count = id_opponent < 5 ? 15 : id_opponent < 13 ? 20 : 25
-                                const gem_type = reward.value.match(/(?<=gems\/).*?(?=\.png)/g)[0]
+                                const gem_type = reward.gem_type? reward.gem_type : reward.value.match(/(?<=gems\/).*?(?=\.png)/g)[0]
                                 if (isMulti) {drop_count = count/gem_count}
                                 reward_key = `G${gem_count == 15 ? first_gems.includes(gem_type) ? 1 : 2 : ''}`
                             } else if (type == 'soft_currency') {
                                 if (isMulti) {
                                     const club_info = lsGet('ClubStatus', 'HHPlusPlus') || {'upgrades': {'soft_currency_gain': {'bonus': 0}}}
                                     const sc_bonus = 1 + club_info.upgrades.soft_currency_gain.bonus
-                                    //console.log(response)
                                     const {Hero} = window
                                     const sc_count = parseInt(response.rewards.heroChangesUpdate.currency.soft_currency) - parseInt(Hero.currencies.soft_currency)
-                                    //console.log(response.rewards.heroChangesUpdate.soft_currency)
-                                    //console.log(Hero.currencies.soft_currency)
-                                    //console.log(sc_count)
                                     const sc_per = (villain_level*100 + 500) * sc_bonus
-                                    //console.log(sc_per)
                                     drop_count = Math.round(sc_count/sc_per) // round to be safe
                                 }
                                 reward_key = 'Y'
                             } else if (type == 'orbs') {
-                                if (reward.value.includes('o_m1')) {
+                                if (reward.orbs_type? reward.orbs_type == 'o_m1' : reward.value.includes('o_m1')) {
                                     reward_key = 'M'
                                 } else {
                                     reward_key = 'O'
@@ -2399,7 +2403,7 @@
                             } else if (type == 'ticket') {
                                 reward_key = 'T'
                             } else if (type == 'progressions') {
-                                if (reward.value.includes('type_progression_sm')) {
+                                if (reward.progression_type? reward.progression_type=="progression_sm" : reward.value.includes('type_progression_sm')) {
                                     reward_key = 'K'
                                 } else {
                                     console.log(reward)
