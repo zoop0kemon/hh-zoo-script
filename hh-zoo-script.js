@@ -1,14 +1,13 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.3
+// @version         0.6.4
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
 // @match           https://*.comixharem.com/*
 // @match           https://*.hornyheroes.com/*
 // @match           https://*.pornstarharem.com/*
-// @match           https://*.mangarpg.com/*
 // @run-at          document-body
 // @updateURL       https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
 // @downloadURL     https://raw.githubusercontent.com/zoop0kemon/hh-zoo-script/main/hh-zoo-script.js
@@ -19,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.4: Updating market tweaks for new HH++ equip filters
 // 0.6.3: Pre-empting update for Pachinko Log, Villain Drops Recorder, and Harem Style Tweaks
 // 0.6.2: Pachinko log updated for equipment pachinko
 // 0.6.1: Changed Villain Drops Recorder shard drop notation and handling
@@ -2086,7 +2086,7 @@
                 .right-container .bottom-container {
                     position: absolute;
                     top: -4rem;
-                    left: 36.75rem;
+                    left: 40rem;
                     width: auto!important;
                 }`)
 
@@ -2202,40 +2202,17 @@
 
                 //css rules for HH++ equip filter
                 sheet.insertRule(`
-                 .equip_filter_box {
-                   width: 5rem!important;
-                }`)
-                sheet.insertRule(`
-                .grid-selector {
-                    margin-bottom: 4px!important;
-                    flex-direction: column;
-                }`)
-                sheet.insertRule(`
-                 .grid-selector .clear-selector img, .grid-selector .selector-options div, .grid-selector .selector-options img {
-                    height: 24px!important;
-                    width: 24px!important;
-                }`)
-                sheet.insertRule(`
                 #my-hero-equipement-tab-container label.equip_filter {
-                    top: 6rem!important;
                     left: 17.5rem!important;
                     z-index: 4;
                 }`)
                 sheet.insertRule(`
-                #my-hero-equipement-tab-container .equip_filter_box.form-wrapper {
-                    top: 5.25rem!important;
+                #my-hero-equipement-tab-container .equip_filter_box {
                     left: 13rem!important;
                 }`)
                 sheet.insertRule(`
-                #equipement-tab-container .right-container label.equip_filter {
-                    top: 6.5rem!important;
-                    right: 27.5rem!important;
-                    z-index: 4;
-                }`)
-                sheet.insertRule(`
-                #equipement-tab-container .equip_filter_box.form-wrapper {
-                    top: 5rem!important;
-                    left: 30rem!important;
+                #my-hero-equipement-tab-container .equip_filter_box.resonance {
+                    left: 6rem!important;
                 }`)
             })
 
