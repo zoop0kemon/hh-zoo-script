@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.4
+// @version         0.6.5
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.5: Fixing bugs with Villain Drops Recorder
 // 0.6.4: Updating market tweaks for new HH++ equip filters
 // 0.6.3: Pre-empting update for Pachinko Log, Villain Drops Recorder, and Harem Style Tweaks
 // 0.6.2: Pachinko log updated for equipment pachinko
@@ -2232,7 +2233,7 @@
         }
 
         shouldRun () {
-            return currentPage.includes('harem') && !currentPage.includes('hero') || currentPage.includes('girl')
+            return currentPage.includes('harem') && !currentPage.includes('hero') || currentPage.includes('/girl/')
         }
 
         run () {
@@ -2342,12 +2343,8 @@
                         response.rewards.data.rewards.forEach((reward) => {
                             const type = reward.type
                             let temp_count = reward.value
-                            if (typeof temp_count !== 'number') {
-                                try {
-                                    temp_count = temp_count.match(/[\d.,]+/g).at(-1).replace(/,/g, '')
-                                } catch {
-                                    temp_count = temp_count.replace(/,/g, '')
-                                }
+                            if (typeof temp_count === 'string') {
+                                temp_count = temp_count.replace(/,/g, '')
                             }
                             const count = parseInt(type == 'item' ? reward.value.quantity : temp_count)
                             let drop_count = isMulti ? count : 1
@@ -2464,19 +2461,33 @@
 
                     if (drop_lists.hasOwnProperty(id_opponent)) {
                         const drop_list = drop_lists[id_opponent]
-                        $('.opponent_rewards>span').wrap('<div class="gridWrapper"></div>')
-                            .before(`<span class="copy"><img tooltip hh_title="Copy Drop Log (${drop_list.length})" src="https://hh.hh-content.com/design/ic_books_gray.svg"></span>`)
-                            .after(`<span class="reset"><img tooltip hh_title="Reset Drop Log" src="https://hh.hh-content.com/caracs/no_class.png"></span>`)
-                        $('.opponent_rewards .copy').click(() => {
-                            copyText(drop_list.join('\n'))
-                        })
-                        $('.opponent_rewards .reset').click(() => {
-                            copyText(drop_list.join('\n'))
-                            delete drop_lists[id_opponent]
-                            lsSet('VillainDrops', drop_lists)
-                            $('.opponent_rewards .copy, .opponent_rewards .reset').remove()
-                            $('.gridWrapper>span').unwrap()
-                        })
+                        const attach_log = () => {
+                            $('.opponent_rewards>span').wrap('<div class="gridWrapper"></div>')
+                                .before(`<span class="copy"><img tooltip hh_title="Copy Drop Log (${drop_list.length})" src="https://hh.hh-content.com/design/ic_books_gray.svg"></span>`)
+                                .after(`<span class="reset"><img tooltip hh_title="Reset Drop Log" src="https://hh.hh-content.com/caracs/no_class.png"></span>`)
+                            $('.opponent_rewards .copy').click(() => {
+                                copyText(drop_list.join('\n'))
+                            })
+                            $('.opponent_rewards .reset').click(() => {
+                                copyText(drop_list.join('\n'))
+                                delete drop_lists[id_opponent]
+                                lsSet('VillainDrops', drop_lists)
+                                $('.opponent_rewards .copy, .opponent_rewards .reset').remove()
+                                $('.gridWrapper>span').unwrap()
+                            })
+                        }
+
+                        if ($('.opponent_rewards>span').length) {
+                            attach_log()
+                        } else {
+                            const observer = new MutationObserver(() => {
+                                if ($('.opponent_rewards>span').length) {
+                                    observer.disconnect()
+                                    attach_log()
+                                }
+                            })
+                            observer.observe(document.documentElement, {childList: true, subtree: true})
+                        }
                     }
 
                     sheet.insertRule(`
