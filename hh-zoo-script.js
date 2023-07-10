@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.5
+// @version         0.6.6
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.6: Updating market tweaks for new 9 booster slots
 // 0.6.5: Fixing bugs with Villain Drops Recorder
 // 0.6.4: Updating market tweaks for new HH++ equip filters
 // 0.6.3: Pre-empting update for Pachinko Log, Villain Drops Recorder, and Harem Style Tweaks
@@ -2092,11 +2093,19 @@
                 }`)
 
                 sheet.insertRule(`
-                .my-inventory {
+                .tab-booster .my-inventory {
+                    width: 27rem!important;
+                }`)
+                sheet.insertRule(`
+                .tab-armor .my-inventory {
                     width: 29rem!important;
                 }`)
                 sheet.insertRule(`
-                .equiped-items {
+                .tab-booster .equiped-items {
+                    width: 16rem!important;
+                }`)
+                sheet.insertRule(`
+                .tab-armor .equiped-items {
                     width: 14rem!important;
                 }`)
                 sheet.insertRule(`
@@ -2104,16 +2113,19 @@
                     display: none;
                 }`)
                 sheet.insertRule(`
-                .armor-container, .booster-container {
+                .armor-container {
                     width: 12rem!important;
                 }`)
                 sheet.insertRule(`
+                .booster-container {
+                    width: 14rem!important;
+                }`)
+                sheet.insertRule(`
                 .booster-container .booster {
-                    flex-direction: column;
                     margin-right: unset!important;
-                    margin-left: 1.5rem!important;
+                    margin-left: 1rem!important;
                     margin-top: 1rem!important;
-                    width: 10rem!important;
+                    width: 12rem!important;
                     height: 12rem;
                 }`)
                 sheet.insertRule(`
@@ -2122,7 +2134,7 @@
                 }`)
                 sheet.insertRule(`
                 .my-inventory .bottom-container {
-                    position: absolute;;
+                    position: absolute;
                     z-index: 100;
                     flex-direction: column-reverse;
                     justify-content: flex-end!important;
@@ -2130,6 +2142,10 @@
                     bottom: 5.25rem!important;
                     height: 4.5rem;
                     width: 7.5rem;
+                }`)
+                sheet.insertRule(`
+                .tab-booster .my-inventory .bottom-container {
+                    left: 45.25rem!important;
                 }`)
                 sheet.insertRule(`
                 .blue_text_button[disabled][rel="levelup"] {
