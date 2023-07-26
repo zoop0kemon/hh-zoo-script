@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.6
+// @version         0.6.7
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.7: Updating pachinko log for equipment pachinko rebalance
 // 0.6.6: Updating market tweaks for new 9 booster slots
 // 0.6.5: Fixing bugs with Villain Drops Recorder
 // 0.6.4: Updating market tweaks for new HH++ equip filters
@@ -1009,6 +1010,10 @@
                 'name': 'Mythic Equips',
                 'time': 1669279200000,
                 'types': ['mythic1', 'mythic1ng', 'event1', 'event1ng']
+            },{
+                'name': 'Equipment Pachinko Rebalance',
+                'time': 1689751960000,
+                'types': ['equipment1']
             }]
             this.reward_keys = {
                 type: {
@@ -1085,12 +1090,13 @@
 
         buildSummary(type_info, summary) {
             let type = type_info.match(/\D+/)[0]
-            let games = type!='event'? type_info.match(/\d+/)[0] : 4
+            let games = type!='event' ? type_info.match(/\d+/)[0] : 4
             let no_girls = type_info.slice(-2) == 'ng' ? true : false
-            let rewards = games>1? (type!='event'&&(!no_girls || type=='great'))? games-1 : games : 1
+            let rewards = games>1 ? !(type=='equipment' && games<10) && (type!='event' && (!no_girls || type=='great')) ? games-1 : games : 1
             let reward_keys = this.reward_keys
             const no_girls_summary = no_girls || (games>1 && (type!='great' && type!='event')) || (games==1 && type=='great') || (type=='equipment')
             const no_mythic_equip_summary = !((summary.time_start == this.pool_updates[0].time) && ((type == 'mythic' && games == 1) || (type == 'event')))
+            const girl_equip_image = summary.time_end == this.pool_updates[1].time ? `https://${cdnHost}/design/girl_armor/girl_armor.png` : 'images/pictures/design/pachinko/ic_girl_armor_tooltip_icon.png'
 
             function getPct(item) {
                 let cat = reward_keys.type[item[0]]
@@ -1100,7 +1106,7 @@
                 let isTotal = item.length == 1 && item != 'g'
 
                 let count = summary[cat]? summary[cat][isTotal? 'total' : item] || 0 : 0
-                let pct = (100*count/(summary.total * (cat!='gems'? type == 'great' || type == 'event' ? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
+                let pct = (100*count/(summary.total * (cat!='gems'? ['great', 'event', 'equipment'].includes(type) ? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
 
                 return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}tooltip hh_title="${count}">${pct}%</span>`)
             }
@@ -1118,7 +1124,7 @@
                     </span>
                 </div>
                 <div class="summary-body ${type}">
-                    <span>${rewards>1? rewards : ''} Random ${games>1? 'Rewards' : 'Reward'}${(type == 'great' && games == 10)? ' + 1 Legendary Equip' : ''}</span>
+                    <span>${rewards>1? rewards : ''} Random ${games>1? 'Rewards' : 'Reward'}${(['great', 'equipment'].includes(type) && games == 10)? ` + 1 Legendary ${type=='equipment'? 'Girl ' : ''}Equip` : ''}</span>
                     ${['great', 'equipment'].includes(type)? '' :
                     `<span>+</span>
                     <span>${type == 'mythic'? games == '1'? '10': games == '3'? '10 Shards and<br>30' : '25 Shards and<br>60' : type == 'event'? '70' : ''}
@@ -1311,7 +1317,7 @@
                                 </li>
                             </ul>
                         </div>`}
-                        ${type == 'mythic' || (type =='epic' && games == '1')? '' :
+                        ${type == 'mythic' || (type =='epic' && games == '1') || (type == 'equipment' && summary.time_end!=this.pool_updates[1].time)? '' :
                         `<div class="summary-div">
                             ${!((type == 'great' && (Hero.infos.level>=100 && games == '1' || games == '10')) || (type == 'equipment'))? '' :
                             `<div class="side-sum-container">
@@ -1380,36 +1386,37 @@
                             <div class="side-sum-container">
                                 ${getPct('e')}
                             </div>
-                            <ul class="summary-grid equips-summary common">
+                            <ul class="summary-grid girl-equips-summary common">
                                 <li>
-                                    <img alt="Common Girl Equip" tooltip hh_title="Common Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    <img alt="Common Girl Equip" tooltip hh_title="Common Girl Equip" src="${girl_equip_image}">
                                     ${getPct('eC')}
                                 </li>
                             </ul>
-                            <ul class="summary-grid equips-summary rare">
+                            <ul class="summary-grid girl-equips-summary rare">
                                 <li>
-                                    <img alt="Rare Girl Equip" tooltip hh_title="Rare Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    <img alt="Rare Girl Equip" tooltip hh_title="Rare Girl Equip" src="${girl_equip_image}">
                                     ${getPct('eR')}
                                 </li>
                             </ul>
-                            <ul class="summary-grid equips-summary epic">
+                            <ul class="summary-grid girl-equips-summary epic">
                                 <li>
-                                    <img alt="Epic Girl Equip" tooltip hh_title="Epic Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    <img alt="Epic Girl Equip" tooltip hh_title="Epic Girl Equip" src="${girl_equip_image}">
                                     ${getPct('eE')}
                                 </li>
                             </ul>
-                            <ul class="summary-grid equips-summary legendary">
+                            ${games==1 && summary.time_end!=this.pool_updates[1].time ? '' : `
+                            <ul class="summary-grid girl-equips-summary legendary">
                                 <li>
-                                    <img alt="Legendary Girl Equip" tooltip hh_title="Legendary Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    <img alt="Legendary Girl Equip" tooltip hh_title="Legendary Girl Equip" src="${girl_equip_image}">
                                     ${getPct('eL')}
                                 </li>
                             </ul>
-                            <ul class="summary-grid equips-summary mythic">
+                            <ul class="summary-grid girl-equips-summary mythic">
                                 <li>
-                                    <img alt="Mythic Girl Equip" tooltip hh_title="Mythic Girl Equip" src="https://${cdnHost}/design/girl_armor/girl_armor.png">
+                                    <img alt="Mythic Girl Equip" tooltip hh_title="Mythic Girl Equip" src="${girl_equip_image}">
                                     ${getPct('eM')}
                                 </li>
-                            </ul>
+                            </ul>`}
                         </div>`}
                     </div>
                     ${['great', 'equipment'].includes(type)? '' :
