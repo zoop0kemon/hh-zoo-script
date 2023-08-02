@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.7
+// @version         0.6.8
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.8: Pre-empting update for League Data Collector and Girl Data Record
 // 0.6.7: Updating pachinko log for equipment pachinko rebalance
 // 0.6.6: Updating market tweaks for new 9 booster slots
 // 0.6.5: Fixing bugs with Villain Drops Recorder
@@ -354,6 +355,7 @@
                 class: 'Class',
                 rarity: 'Rarity',
                 stars: 'Max Stars',
+                trait: 'Trait',
                 pose: 'Favorite Position',
                 hair: 'Hair Color',
                 eyes: 'Eye Color',
@@ -367,6 +369,13 @@
                 style: 'Style',
                 desc: 'Description',
                 ref_id: 'Ref ID'
+            }
+
+            this.trait_names = {
+                'figure': 'Position',
+                'hair_color': 'Hair Color',
+                'eye_color': 'Eye Color',
+                'zodiac': 'Zodiac'
             }
         }
 
@@ -397,6 +406,7 @@
                 class: GT.caracs[girl.class],
                 rarity: capFirst(girl.rarity),
                 stars: (girl.graded2.match(/\<\/g\>/g) || []).length,
+                trait: girl.skill_tiers_info ? girl.skill_tiers_info[3]? this.trait_names[girl.skill_tiers_info[3].icon] : 'None' : '',
                 pose: pose == "Doggie style" ? "Doggie Style" : pose,
                 hair: ref.hair.replaceAll(/<(.*?)>/g,''),
                 eyes: ref.eyes.replaceAll(/<(.*?)>/g,''),
@@ -521,7 +531,7 @@
 
                         for (const [key, value] of Object.entries(newData)) {
                             if (value!=oldData[key]) {
-                                if (!((key=='desc' || key=='pose') && (value=='' || oldData[key]==''))) {//change back once pose is back
+                                if (!((['desc', 'trait', 'pose'].includes(key)) && (value=='' || oldData[key]==''))) {//change back once pose is back
                                     dataChanges.push({
                                         id: id,
                                         field: key,
@@ -855,7 +865,9 @@
         }
 
         recordData () {
+            const {leagues_list, opponents_list} = window
             const oldLeagueData = lsGet('LeagueRecord')
+            const opponents = leagues_list ? leagues_list.length : opponents_list.length
             let leagueData = {date: new Date(), playerList: [], banned: []}
 
             if (oldLeagueData) {
@@ -864,25 +876,29 @@
                 if (leagueResults) {
                     Object.entries(leagueResults).forEach(([id])=>{if(!oldLeagueData.playerList.some(e=>e.id==id)){banned.push(id)}});
                 }
-                oldLeagueData.playerList.forEach(({id})=>{if(!leagues_list.some(e=>e.id_player==id)){banned.push(id)}});
+                if (leagues_list) {
+                    oldLeagueData.playerList.forEach(({id})=>{if(!leagues_list.some(e=>e.id_player==id)){banned.push(id)}});
+                } else {
+                    oldLeagueData.playerList.forEach(({id})=>{if(!opponents_list.some(e=>e.player.id_fighter==id)){banned.push(id)}});
+                }
                 leagueData.banned = [... new Set(banned)]
             }
 
 
-            for (let i=0;i<leagues_list.length;i++) {
-                const playerRow = $(leagues_list[i].html.replaceAll('\t','').replaceAll('\n',''))
-                let flag = $(playerRow).find('.country').attr('hh_title')
+            for (let i=0;i<opponents;i++) {
+                const playerRow = leagues_list ? $(leagues_list[i].html.replaceAll('\t','').replaceAll('\n','')) : null
+                let flag = leagues_list ? $(playerRow).find('.country').attr('hh_title') : opponents_list[i].country_text
                 const translation = flag_fr.indexOf(flag)
                 if (translation > -1) {
                     flag = flag_en[translation]
                 }
 
                 leagueData.playerList.push({
-                    id: leagues_list[i].id_player,
-                    name: $(playerRow).find('.nickname').text(),
-                    level: leagues_list[i].level,
+                    id: leagues_list ? leagues_list[i].id_player : opponents_list[i].player.id_opponent,
+                    name: leagues_list ? $(playerRow).find('.nickname').text() : opponents_list[i].player.nickname,
+                    level: leagues_list ? leagues_list[i].level : opponents_list[i].player.level,
                     flag: flag,
-                    points: $(playerRow[4]).text().match(/\d+/g).join('')
+                    points: leagues_list ? $(playerRow[4]).text().match(/\d+/g).join('') : opponents_list[i].player_league_points
                 })
             }
             leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1);
@@ -943,17 +959,32 @@
 
                 this.recordData()
 
-                $(".leagues_middle_header_script").append(`
-                <div class="record_league">
-                    <span id="last_week">
-                        <img alt="Copy Last Week's League" tooltip hh_title="Copy Last Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
-                    </span>
-                </div>
-                <div class="record_league">
-                    <span id="this_week">
-                        <img alt="Copy This Week's League" tooltip hh_title="Copy This Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
-                    </span>
-                </div>`)
+                const {leagues_list: hasLeagues_list} = window
+                if (hasLeagues_list) {
+                    $(".leagues_middle_header_script").append(`
+                    <div class="record_league">
+                        <span id="last_week">
+                            <img alt="Copy Last Week's League" tooltip hh_title="Copy Last Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
+                        </span>
+                    </div>
+                    <div class="record_league">
+                        <span id="this_week">
+                            <img alt="Copy This Week's League" tooltip hh_title="Copy This Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
+                        </span>
+                    </div>`)
+                } else {
+                    $(".league_end_in").before(`
+                    <div class="record_league">
+                        <span id="last_week">
+                            <img alt="Copy Last Week's League" tooltip hh_title="Copy Last Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
+                        </span>
+                    </div>`).after(`
+                    <div class="record_league">
+                        <span id="this_week">
+                            <img alt="Copy This Week's League" tooltip hh_title="Copy This Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
+                        </span>
+                    </div>`)
+                }
 
                 $('.record_league >span#last_week').click(() => {
                     this.copyData('Old')
@@ -964,7 +995,7 @@
 
                 sheet.insertRule(`
                 .record_league {
-                    position: absolute;
+                    ${hasLeagues_list ? 'position: absolute;' : ''}
                     cursor: pointer;
                 }`);
                 sheet.insertRule(`
