@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.8
+// @version         0.6.9
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.9: Fixing update for League Data Collector
 // 0.6.8: Pre-empting update for League Data Collector and Girl Data Record
 // 0.6.7: Updating pachinko log for equipment pachinko rebalance
 // 0.6.6: Updating market tweaks for new 9 booster slots
@@ -865,9 +866,8 @@
         }
 
         recordData () {
-            const {leagues_list, opponents_list} = window
+            const {opponents_list} = window
             const oldLeagueData = lsGet('LeagueRecord')
-            const opponents = leagues_list ? leagues_list.length : opponents_list.length
             let leagueData = {date: new Date(), playerList: [], banned: []}
 
             if (oldLeagueData) {
@@ -876,29 +876,24 @@
                 if (leagueResults) {
                     Object.entries(leagueResults).forEach(([id])=>{if(!oldLeagueData.playerList.some(e=>e.id==id)){banned.push(id)}});
                 }
-                if (leagues_list) {
-                    oldLeagueData.playerList.forEach(({id})=>{if(!leagues_list.some(e=>e.id_player==id)){banned.push(id)}});
-                } else {
-                    oldLeagueData.playerList.forEach(({id})=>{if(!opponents_list.some(e=>e.player.id_fighter==id)){banned.push(id)}});
-                }
+                oldLeagueData.playerList.forEach(({id})=>{if(!opponents_list.some(e=>e.player.id_fighter==id)){banned.push(id)}});
                 leagueData.banned = [... new Set(banned)]
             }
 
 
-            for (let i=0;i<opponents;i++) {
-                const playerRow = leagues_list ? $(leagues_list[i].html.replaceAll('\t','').replaceAll('\n','')) : null
-                let flag = leagues_list ? $(playerRow).find('.country').attr('hh_title') : opponents_list[i].country_text
+            for (let i=0;i<opponents_list.length;i++) {
+                let flag = opponents_list[i].country_text
                 const translation = flag_fr.indexOf(flag)
                 if (translation > -1) {
                     flag = flag_en[translation]
                 }
 
                 leagueData.playerList.push({
-                    id: leagues_list ? leagues_list[i].id_player : opponents_list[i].player.id_opponent,
-                    name: leagues_list ? $(playerRow).find('.nickname').text() : opponents_list[i].player.nickname,
-                    level: leagues_list ? leagues_list[i].level : opponents_list[i].player.level,
+                    id: opponents_list[i].player.id_fighter,
+                    name: opponents_list[i].player.nickname,
+                    level: opponents_list[i].player.level,
                     flag: flag,
-                    points: leagues_list ? $(playerRow[4]).text().match(/\d+/g).join('') : opponents_list[i].player_league_points
+                    points: opponents_list[i].player_league_points
                 })
             }
             leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1);
@@ -959,20 +954,7 @@
 
                 this.recordData()
 
-                const {leagues_list: hasLeagues_list} = window
-                if (hasLeagues_list) {
-                    $(".leagues_middle_header_script").append(`
-                    <div class="record_league">
-                        <span id="last_week">
-                            <img alt="Copy Last Week's League" tooltip hh_title="Copy Last Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
-                        </span>
-                    </div>
-                    <div class="record_league">
-                        <span id="this_week">
-                            <img alt="Copy This Week's League" tooltip hh_title="Copy This Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
-                        </span>
-                    </div>`)
-                } else {
+                HHPlusPlus.Helpers.doWhenSelectorAvailable('.league_end_in', () => {
                     $(".league_end_in").before(`
                     <div class="record_league">
                         <span id="last_week">
@@ -984,18 +966,17 @@
                             <img alt="Copy This Week's League" tooltip hh_title="Copy This Week's League" src="https://hh.hh-content.com/design/ic_books_gray.svg">
                         </span>
                     </div>`)
-                }
 
-                $('.record_league >span#last_week').click(() => {
-                    this.copyData('Old')
-                })
-                $('.record_league >span#this_week').click(() => {
-                    this.copyData('')
+                    $('.record_league >span#last_week').click(() => {
+                        this.copyData('Old')
+                    })
+                    $('.record_league >span#this_week').click(() => {
+                        this.copyData('')
+                    })
                 })
 
                 sheet.insertRule(`
                 .record_league {
-                    ${hasLeagues_list ? 'position: absolute;' : ''}
                     cursor: pointer;
                 }`);
                 sheet.insertRule(`
