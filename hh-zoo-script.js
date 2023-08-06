@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.9
+// @version         0.6.10
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.6.10: Added data protection for League Data Collector, better handling of trait info for Girl Data Record, and fixing Harem Style Tweaks
 // 0.6.9: Fixing update for League Data Collector
 // 0.6.8: Pre-empting update for League Data Collector and Girl Data Record
 // 0.6.7: Updating pachinko log for equipment pachinko rebalance
@@ -372,11 +373,15 @@
                 ref_id: 'Ref ID'
             }
 
-            this.trait_names = {
-                'figure': 'Position',
-                'hair_color': 'Hair Color',
-                'eye_color': 'Eye Color',
-                'zodiac': 'Zodiac'
+            this.trait_map = {
+                'fire': 'Eye Color',
+                'nature': 'Hair Color',
+                'stone': 'Zodiac',
+                'sun': 'Position',
+                'water': 'Position',
+                'darkness': 'Eye Color',
+                'light': 'Hair Color',
+                'psychic': 'Zodiac'
             }
         }
 
@@ -399,6 +404,7 @@
             //const girl_class = all_possible_girls[id].class
             //const pose = GT.figures[all_possible_girls[id].figure];
             const pose = GT.figures[girl.figure] || '';
+            const stars = (girl.graded2.match(/\<\/g\>/g) || []).length
 
             let girlInfo = {
                 name: girl.name,
@@ -406,8 +412,8 @@
                 element: GT.design[element+'_flavor_element'],
                 class: GT.caracs[girl.class],
                 rarity: capFirst(girl.rarity),
-                stars: (girl.graded2.match(/\<\/g\>/g) || []).length,
-                trait: girl.skill_tiers_info ? girl.skill_tiers_info[3]? this.trait_names[girl.skill_tiers_info[3].icon] : 'None' : '',
+                stars: stars,
+                trait: stars < 3 ? 'None' : this.trait_map[element],
                 pose: pose == "Doggie style" ? "Doggie Style" : pose,
                 hair: ref.hair.replaceAll(/<(.*?)>/g,''),
                 eyes: ref.eyes.replaceAll(/<(.*?)>/g,''),
@@ -867,44 +873,45 @@
 
         recordData () {
             const {opponents_list} = window
-            const oldLeagueData = lsGet('LeagueRecord')
-            let leagueData = {date: new Date(), playerList: [], banned: []}
+            if (opponents_list && opponents_list.length) {
+                const oldLeagueData = lsGet('LeagueRecord')
+                let leagueData = {date: new Date(), playerList: [], banned: []}
 
-            if (oldLeagueData) {
-                let banned = oldLeagueData.banned || []
-                const leagueResults = lsGet('LeagueResults', 'HHPlusPlus')
-                if (leagueResults) {
-                    Object.entries(leagueResults).forEach(([id])=>{if(!oldLeagueData.playerList.some(e=>e.id==id)){banned.push(id)}});
-                }
-                oldLeagueData.playerList.forEach(({id})=>{if(!opponents_list.some(e=>e.player.id_fighter==id)){banned.push(id)}});
-                leagueData.banned = [... new Set(banned)]
-            }
-
-
-            for (let i=0;i<opponents_list.length;i++) {
-                let flag = opponents_list[i].country_text
-                const translation = flag_fr.indexOf(flag)
-                if (translation > -1) {
-                    flag = flag_en[translation]
+                if (oldLeagueData) {
+                    let banned = oldLeagueData.banned || []
+                    const leagueResults = lsGet('LeagueResults', 'HHPlusPlus')
+                    if (leagueResults) {
+                        Object.entries(leagueResults).forEach(([id])=>{if(!oldLeagueData.playerList.some(e=>e.id==id)){banned.push(id)}});
+                    }
+                    oldLeagueData.playerList.forEach(({id})=>{if(!opponents_list.some(e=>e.player.id_fighter==id)){banned.push(id)}});
+                    leagueData.banned = [... new Set(banned)]
                 }
 
-                leagueData.playerList.push({
-                    id: opponents_list[i].player.id_fighter,
-                    name: opponents_list[i].player.nickname,
-                    level: opponents_list[i].player.level,
-                    flag: flag,
-                    points: opponents_list[i].player_league_points
+                opponents_list.forEach(({country_text, player, player_league_points}) => {
+                    let flag = country_text
+                    const translation = flag_fr.indexOf(flag)
+                    if (translation > -1) {
+                        flag = flag_en[translation]
+                    }
+
+                    leagueData.playerList.push({
+                        id: player.id_fighter,
+                        name: player.nickname,
+                        level: player.level,
+                        flag: flag,
+                        points: player_league_points
+                    })
                 })
-            }
-            leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1);
+                leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1);
 
-            lsSet('LeagueRecord', leagueData)
+                lsSet('LeagueRecord', leagueData)
+            }
         }
 
         copyData (week) {
             const leagueData = lsGet(`${week}LeagueRecord`)
             const simHist = lsGet(`${week}SimHistory`)
-            const pointHist = lsGet(`LeaguePointHistory${week}`, 'HHPlusPlus')
+            const pointHist = lsGet(`LeagueResults${week}`, 'HHPlusPlus')
             const extra = simHist ? true : false
             let prow = ''
 
@@ -912,18 +919,22 @@
             if (leagueData) {
                 leagueData.playerList.forEach((player) => {
                     let row = Object.values(player).join('\t')
+
                     if (extra) {
                         const id = player.id
-                        row += `\t${pointHist[id] ? pointHist[id].points.join('\t') : id != Hero.infos.id ? '\t\t' : 'X\tX\tX'}\t`
+                        const points = pointHist[id].points
+                        const padded_points = points.concat(Array(3).fill('')).slice(0, 3)
+                        row += `\t${points.length > 0 ? padded_points.join('\t') : id != Hero.infos.id ? '\t\t' : 'X\tX\tX'}\t`
 
-                        for(let i=0;i<29;i++){
+                        const player_simHist = simHist[id] || {}
+                        for (let i=0;i<29;i++) {
                             try {
-                                row += `${simHist[id][i] || ''}\t`
+                                row += `${player_simHist[i] || ''}\t`
                             } catch (e) {
                                 row += `${id != Hero.infos.id ? '' : simHist['me'][i]}\t`
                             }
                         }
-                        row += id != Hero.infos.id ? simHist[id].hitTime ? Math.min.apply(null,simHist[id].hitTime) : '' : 'NA'
+                        row += id != Hero.infos.id ? player_simHist.hitTime ? Math.min.apply(null, player_simHist.hitTime) : '' : 'NA'
                     }
 
                     if (extra && (player.id == Hero.infos.id)) {
@@ -2278,7 +2289,7 @@
                 if (currentPage.includes('harem') && !currentPage.includes('hero')) {
                     sheet.insertRule(`
                     #harem_left div.girls_list.grid_view div[girl]>.left>.icon span {
-                        margin-right: -24px;
+                        margin-right: -30px;
                     }`)
                     sheet.insertRule(`
                     #harem_left div.girls_list.grid_view div[girl].opened>.right>.g_infos>.lvl {
@@ -2312,15 +2323,15 @@
                     })
 
                     sheet.insertRule(`
-                    div#tabs_switcher {
+                    div#tabs-switcher {
                         padding: 0.25rem;
                     }`)
                     sheet.insertRule(`
-                    .girl-leveler-panel .girl-leveler-container .inventory-section .switch-tab-content .total-from-items {
+                    .girl-leveler-panel .girl-leveler-container .switch-tab-content .total-from-items {
                         margin-top: 0.5rem;
                     }`)
                     sheet.insertRule(`
-                    .girl-leveler-panel .girl-leveler-container .inventory-section .switch-tab-content .total-from-items p {
+                    .girl-leveler-panel .girl-leveler-container .switch-tab-content .total-from-items p {
                         margin-top: 0.25rem;
                         margin-bottom: 0.25rem;
                     }`)
@@ -2329,7 +2340,7 @@
                         grid-auto-flow: column;
                         grid-template-rows: auto auto auto auto;
                         height: 22.5rem;
-                        gap: 0.5rem 1.5rem;
+                        gap: 0.5rem 1rem;
                         padding-top: 0.5rem;
                         justify-content: start;
                     }`)
