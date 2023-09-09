@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.6.10
+// @version         0.7.0
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.7.0: Adding module for tracking Champion drops, and a module to copy LR leaderboards
 // 0.6.10: Added data protection for League Data Collector, better handling of trait info for Girl Data Record, and fixing Harem Style Tweaks
 // 0.6.9: Fixing update for League Data Collector
 // 0.6.8: Pre-empting update for League Data Collector and Girl Data Record
@@ -918,26 +919,31 @@
             let text = leagueData ? `${new Date(leagueData.date).toUTCString()}${leagueData.banned.length>0 ? '\tBanned: ' : ''}${leagueData.banned.join(', ')}\n` : 'No Data Found';
             if (leagueData) {
                 leagueData.playerList.forEach((player) => {
+                    const isSelf = player.id == Hero.infos.id
                     let row = Object.values(player).join('\t')
 
                     if (extra) {
                         const id = player.id
-                        const points = pointHist[id].points
-                        const padded_points = points.concat(Array(3).fill('')).slice(0, 3)
-                        row += `\t${points.length > 0 ? padded_points.join('\t') : id != Hero.infos.id ? '\t\t' : 'X\tX\tX'}\t`
+                        if (!isSelf) {
+                            const points = pointHist[id].points
+                            const padded_points = points.concat(Array(3).fill('')).slice(0, 3)
+                            row += `\t${points.length > 0 ? padded_points.join('\t') : '\t\t'}\t`
+                        } else {
+                            row += '\tX\tX\tX\t'
+                        }
 
                         const player_simHist = simHist[id] || {}
                         for (let i=0;i<29;i++) {
-                            try {
+                            if (!isSelf) {
                                 row += `${player_simHist[i] || ''}\t`
-                            } catch (e) {
-                                row += `${id != Hero.infos.id ? '' : simHist['me'][i]}\t`
+                            } else {
+                                row += `${simHist['me'][i]}\t`
                             }
                         }
-                        row += id != Hero.infos.id ? player_simHist.hitTime ? Math.min.apply(null, player_simHist.hitTime) : '' : 'NA'
+                        row += !isSelf ? player_simHist.hitTime ? Math.min.apply(null, player_simHist.hitTime) : '' : 'NA'
                     }
 
-                    if (extra && (player.id == Hero.infos.id)) {
+                    if (extra && isSelf) {
                         prow = row;
                     } else {
                         text += `${row}\n`;
@@ -991,27 +997,12 @@
                     cursor: pointer;
                 }`);
                 sheet.insertRule(`
-                @media (min-width: 1026px) {
-                    .record_league {
-                        left: 360px;
-                        top: 30px;
-                    }
-                }`);
-                sheet.insertRule(`
-                @media (max-width: 1025px) {
-                    .record_league {
-                        left: 510px;
-                        top: 45px;
-                    }
-                }`);
-                sheet.insertRule(`
                 .record_league >span#last_week {
                     opacity: 0.75;
                 }`);
                 sheet.insertRule(`
-                .record_league >span#this_week {
-                    position: inherit;
-                    left: 35px;
+                #leagues .league_content .league_buttons .challenge_points {
+                    margin-right: 1.5rem;
                 }`);
             })
 
@@ -2557,6 +2548,381 @@
         }
     }
 
+    class ChampDrops extends HHModule {
+        constructor () {
+            const baseKey = 'ChampDrops'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `Champion Drops Recorder`
+            }
+            super({name: baseKey, configSchema})
+        }
+
+        shouldRun () {
+            return currentPage.includes('champions/') || currentPage.includes('champions-map')
+        }
+
+        run () {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            $(document).ready(() => {
+                if (currentPage.includes('champions/')) {
+                    HHPlusPlus.Helpers.onAjaxResponse(/battle_type=champion/, (response, opt) => {
+                        const searchParams = new URLSearchParams(opt.data)
+                        const battles = parseInt(searchParams.get('battles_amount'))
+                        const champ_id = parseInt(searchParams.get('defender_id'))
+                        const champ_drops = lsGet('ChampDrops') || {}
+                        if (Object.keys(champ_drops).length === 0) {
+                            const zeroes = Array(7).fill(0)
+                            champ_drops.loss = {total_drops: [...zeroes]};
+                            ['common', 'rare', 'epic', 'legendary', 'mythic'].forEach((rarity) => {
+                                champ_drops.loss[`scrolls_${rarity}`] = {drops: [...zeroes], amount: [...zeroes]}
+                            })
+                            champ_drops.winShard = {
+                                total_drops: [...zeroes],
+                                shards: {
+                                    drops: [...zeroes],
+                                    ids: {1: [], 2: [], 3: [], 4: [], 5: [], 6: []}
+                                }
+                            }
+                        }
+
+                        if (response.final.winner.type === 'champion') { // loss: ymen or bulb
+                            if ('rewards' in response.end.rewards.data) {
+                                champ_drops.loss.total_drops[0] += battles
+                                champ_drops.loss.total_drops[champ_id] += battles
+                                response.end.rewards.data.rewards.forEach((reward) => {
+                                    if (reward.type in champ_drops.loss) {
+                                        champ_drops.loss[reward.type].drops[0] += 1
+                                        champ_drops.loss[reward.type].drops[champ_id] += 1
+                                        champ_drops.loss[reward.type].amount[0] += parseInt(reward.value)
+                                        champ_drops.loss[reward.type].amount[champ_id] += parseInt(reward.value)
+                                    }
+                                })
+                            }
+                        } else {
+                            // win and stage 1-4 with event girl: L. equip or 35 shards
+                            const {championData} = window
+                            const {champion: {stage}} = championData
+                            if (((stage.current + 1) != stage.max) && ('girl_shards' in championData.reward.stage)) {
+                                champ_drops.winShard.total_drops[0] += 1
+                                champ_drops.winShard.total_drops[champ_id] += 1
+                                if ('shards' in response.end.rewards.data) {
+                                    response.end.rewards.data.shards.forEach((reward) => {
+                                        champ_drops.winShard.shards.drops[0] += 1
+                                        champ_drops.winShard.shards.drops[champ_id] += 1
+                                        champ_drops.winShard.shards.ids[champ_id].push(parseInt(reward.id_girl))
+                                    })
+                                }
+                            }
+                        }
+
+                        lsSet('ChampDrops', champ_drops)
+                    })
+                } else if (currentPage.includes('champions-map')) {
+                    const champ_drops = lsGet('ChampDrops')
+                    if (champ_drops) {
+                        const buildSummary = (key) => {
+                            const headers = {
+                                loss: 'Loss - Any Tier',
+                                winShard: 'Shard Win - Tiers 1-4',
+                            }
+                            const rewards_info = {
+                                scrolls_mythic: {
+                                    text: 'Mythic Bulb',
+                                    src: '/girl_skills/mythic_resource.png'
+                                },
+                                scrolls_legendary: {
+                                    text: 'Legendary Bulb',
+                                    src: '/girl_skills/legendary_resource.png'
+                                },
+                                scrolls_epic: {
+                                    text: 'Epic Bulb',
+                                    src: '/girl_skills/epic_resource.png'
+                                },
+                                scrolls_rare: {
+                                    text: 'Rare Bulb',
+                                    src: '/girl_skills/rare_resource.png'
+                                },
+                                scrolls_common: {
+                                    text: 'Common Bulb',
+                                    src: '/girl_skills/common_resource.png'
+                                },
+                                loss: {
+                                    text: 'Ymen',
+                                    src: 'pictures/design/ic_topbar_soft_currency.png'
+                                },
+                                shards: {
+                                    text: 'Shards',
+                                    src: 'shards.png'
+                                },
+                                winShard: {
+                                    text: 'Other',
+                                    src: 'design/mythic_equipment/mythic_equipment.png'
+                                }
+                            }
+
+                            const pool_drops = champ_drops[key]
+                            const rewards = [key].concat(Object.keys(pool_drops).slice(1)).reverse()
+
+                            const buildColumn = (index) => {
+                                const total = pool_drops.total_drops[index]
+                                let other = 0
+                                const column = `<ul${index != 0 ? '' : ' class="total_column"'}>
+                                    <li class="column_header">
+                                        <span>${index != 0 ? `Champ ${index}` : 'Total'}</span>
+                                        <span class="sample-count ticket_icn">${total}</span>
+                                    </li>
+                                    ${rewards.map((reward) => {
+                                        const drops = reward!=key ? pool_drops[reward].drops[index] : pool_drops.total_drops[index]-other
+                                        other += drops
+                                        return `<li${reward!=key && pool_drops[reward].amount ? ` class="two_data">
+                                            <span>${pool_drops[reward].amount[index]}</span>` : '>'}
+                                            <span tooltip="" hh_title="${drops} <span class='ticket_icn'></span>">${(100 * (drops/total)).toFixed(2)}%</span>
+                                        </li>`
+                                    }).join('')}
+                                </ul>`
+
+                                return column;
+                            }
+
+                            const summary = `
+                            <div class="champ-summary ${key}">
+                                <div class="summary-header">
+                                    <h1>${headers[key]}</h1>
+                                </div>
+                                <div class="summary-body">
+                                    <ul>
+                                        <li class="column_header"><span></span></li>
+                                        ${rewards.map((reward) => {
+                                            const info = rewards_info[reward]
+                                            return `<li><img alt="${info.text}" tooltip="" hh_title="${info.text}" src="https://${cdnHost}/${info.src}"></li>`
+                                        }).join('')}
+                                    </ul>
+                                    ${[...Array(7).keys()].map((index) => buildColumn(index)).join('')}
+                                </div>
+                            </div>`
+
+                            return summary
+                        }
+
+                        const $button = $('<div class="blue_circular_btn champ-log-btn"><span class="info_icn"></span></div>')
+                        const $panel = $(`<div class="champ-log-panel">${Object.keys(champ_drops).map((key) => buildSummary(key)).join('')}</div>`)
+                        const $overlayBG = $('<div class="champ-log-overlay-bg"></div>')
+
+                        const $champ_drops = $('<div class="champ-drops"></div>').append($button).append($panel).append($overlayBG)
+                        $('.page-champions_map section').append($champ_drops)
+
+                        $button.click(() => {
+                            $panel.toggleClass('visible')
+                            $overlayBG.toggleClass('visible')
+                        })
+
+                        $overlayBG.click(() => {
+                            $panel.removeClass('visible')
+                            $overlayBG.removeClass('visible')
+                        })
+
+                        sheet.insertRule(`
+                        .champ-log-btn {
+                           position: absolute;
+                           right: 2rem;
+                           width: 35px;
+                           height: 35px;
+                        }`)
+                        sheet.insertRule(`
+                        .champ-log-overlay-bg {
+                            display: none;
+                            width: 100%;
+                            height: 110%;
+                            position: absolute;
+                            top: -5%;
+                            z-index: 50;
+                        }`);
+                        sheet.insertRule(`
+                        .champ-log-panel {
+                            display: none;
+                            background-color: #080808f5;
+                            color: #fff;
+                            font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
+                            font-weight: 400;
+                            position: absolute;
+                            top: 40px;
+                            right: 20px;
+                            width: 32rem;
+                            z-index: 51;
+                            border-radius: 5px;
+                            border-width: 5px;
+                            border-style: solid;
+                            border-color: #cccccc42;
+                            padding: 4px;
+                            grid-gap: 10px;
+                            grid-template-columns: auto;
+                            max-height: 470px;
+                            overflow-y: auto;
+                        }`)
+                        sheet.insertRule(`
+                        .champ-log-overlay-bg.visible {
+                            display: block;
+                        }`)
+                        sheet.insertRule(`
+                        .champ-log-panel.visible {
+                            display: grid;
+                        }`)
+                        sheet.insertRule(`
+                        .champ-log-panel h1 {
+                            text-align: center;
+                            font-size: 1.4em;
+                        }`)
+                        sheet.insertRule(`
+                        .summary-header img {
+                            width: 2rem;
+                            height: 2rem;
+                        }`)
+                        sheet.insertRule(`
+                        .champ-summary .sample-count {
+                            width: 2.5rem;
+                            background-position: center;
+                            text-align: center;
+                            text-shadow: 2px 2px 2px black;
+                            padding-top: 10px;
+                        }`)
+                        sheet.insertRule(`
+                        .summary-body {
+                            display: grid;
+                            grid-template-columns: 2rem repeat(7, 1fr);
+                            column-gap: 0.5rem;
+                            text-align: center;
+                            align-items: center;
+                        }`)
+                        sheet.insertRule(`
+                        .summary-body ul {
+                            margin: 0px;
+                            padding: 0px;
+                            list-style: none;
+                            font-size: 14px;
+                        }`)
+                        sheet.insertRule(`
+                        .summary-body li {
+                            display: grid;
+                            height: 2rem;
+                            align-items: center;
+                            font-size: 12px;
+                        }`)
+                        sheet.insertRule(`
+                        .summary-body li.two_data {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            column-gap: 0.25rem;
+                        }`)
+                        sheet.insertRule(`
+                        .summary-body ul img {
+                            width: 2rem;
+                            height: 2rem;
+                        }`)
+                        sheet.insertRule(`
+                        .summary-body li.column_header {
+                            display: grid;
+                            grid-auto-rows: auto;
+                            height: 3rem;
+                            justify-content: center;
+                            justify-items: center;
+                            font-size: 14px;
+                        }`)
+                        sheet.insertRule(`
+                        .summary-body ul.total_column {
+                            border-right: 4px solid;
+                            border-color: rgba(204, 204, 204, 0.26);
+                            padding-right: 6px;
+                        }`)
+                    }
+                }
+            })
+
+            this.hasRun = true
+        }
+    }
+
+    class CopyLeaderboard extends HHModule {
+        constructor () {
+            const baseKey = 'CopyLeaderboard'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `Copy LR Leaderboards`
+            }
+            super({name: baseKey, configSchema})
+
+            this.output = ''
+        }
+
+        shouldRun () {
+            return currentPage.includes('seasonal')
+        }
+
+        run () {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            const attachCopy = (selector, time) => {
+                setTimeout(() => {
+                    const $copy = $('<div class="copy-data" tooltip hh_title="Copy Leaderboard"></div>')
+                    const $timer = $(`${selector} [rel=expires]`)
+
+                    $timer.addClass('copy-time').attr('tooltip', '').attr('hh_title', 'Copy Time')
+                    $timer.click(() => copyText(time))
+                    $(`${selector} .ranking-timer.timer`).append($copy)
+                    $copy.click(() => copyText(this.output))
+                }, 500)
+            }
+
+            HHPlusPlus.Helpers.onAjaxResponse(/action=leaderboard/, (response, opt) => {
+                const {leaderboard, hero_data} = response
+                const {GT} = window
+                const time = Date.now()
+                const searchParams = new URLSearchParams(opt.data)
+                const feature = searchParams.get('feature')
+
+                if (feature === 'seasonal_event_top') {
+                    this.output = leaderboard.map((row) => {
+                        const {rewards} = row.rewards
+                        return [row.rank, row.id_member, row.nickname, row.potions, ...rewards.map((reward) => reward.value)].join('\t')
+                    }).join('\n')
+                    if (hero_data.rank > 1000) {
+                        const {Hero} = window
+                        const rewards = hero_data.rewards.rewards
+                        const padded_rewards = rewards.concat(Array(4).fill().slice(rewards.length))
+                        this.output += `\n${[hero_data.rank, Hero.infos.id, Hero.infos.name, hero_data.potions, ...padded_rewards.map((reward) => reward ? reward.value : '')].join('\t')}`
+                    }
+
+                    attachCopy('#top_ranking_tab_container', time)
+                } else if (feature === 'seasonal_event_percent') {
+                    this.output = [...leaderboard.map((bracket) => {
+                        return [GT.design.points_ranking_top.replace("[perc]", bracket.percentile), bracket.min_potions].join('\t')
+                    }), [GT.design.points_ranking.replace("[perc]", hero_data.rank/100), hero_data.potions].join('\t')].join('\n')
+
+                    attachCopy('#event_ranking_tab_container', time)
+                }
+            })
+
+            sheet.insertRule(`
+            .copy-data {
+                width: 26px;
+                height: 26px;
+                margin-top: 0px;
+                margin-left: 10px;
+                cursor: pointer;
+                background-image: url(https://${cdnHost}/design/ic_books_gray.svg);
+            }`)
+            sheet.insertRule(`
+            .copy-time {
+                cursor: pointer;
+            }`)
+
+            this.hasRun = true
+        }
+    }
+
     const allModules = [
         new GirlDataRecord(),
         new LeagueDataCollector(),
@@ -2564,7 +2930,9 @@
         new CopyContests(),
         new MarketTweaks(),
         new HaremTweaks(),
-        new VillainDrops()
+        new VillainDrops(),
+        new ChampDrops(),
+        new CopyLeaderboard()
     ]
 
     setTimeout(() => {
