@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.7.0
+// @version         0.7.1
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.7.1: Fixing compact market style tweak
 // 0.7.0: Adding module for tracking Champion drops, and a module to copy LR leaderboards
 // 0.6.10: Added data protection for League Data Collector, better handling of trait info for Girl Data Record, and fixing Harem Style Tweaks
 // 0.6.9: Fixing update for League Data Collector
@@ -2178,6 +2179,7 @@
                     width: 24rem!important;
                     justify-content: unset!important;
                     margin-left: 1.5rem;
+                    max-width: unset!important;
                 }`)
                 sheet.insertRule(`
                 .my-hero-switch-content .my-inventory-container .armor {
