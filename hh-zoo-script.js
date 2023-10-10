@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some style and data recording scripts by zoopokemon
-// @version         0.7.1
+// @version         0.7.2
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -18,6 +18,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.7.2: Fixing Copy Contests module
 // 0.7.1: Fixing compact market style tweak
 // 0.7.0: Adding module for tracking Champion drops, and a module to copy LR leaderboards
 // 0.6.10: Added data protection for League Data Collector, better handling of trait info for Girl Data Record, and fixing Harem Style Tweaks
@@ -1963,7 +1964,7 @@
                 label: `Copy Contests`,
                 subSettings: [{
                     key: 'active',
-                    label: `Also copy active Contests`,
+                    label: `Include active Contests`,
                     default: false
                 }]
             }
@@ -1978,34 +1979,32 @@
             if (this.hasRun || !this.shouldRun()) {return}
 
             HHPlusPlus.Helpers.defer(() => {
-                $(".ranking.over_panel .closed").each(function (index) {
-                    $(this).attr('tooltip','')
-                    $(this).attr('hh_title','Copy Contest')
-                    $(this).append('<img src="https://hh.hh-content.com/design/ic_books_gray.svg">')
+                HHPlusPlus.Helpers.doWhenSelectorAvailable('#contests .right_part', () => {
+                    const {contests} = window
+                    const types = ['finished']
+                    if (active) {
+                        types.push('active')
+                    }
 
-                    $(this).click(() => {
-                        const contest_num = $(".ranking.over_panel").eq(index).attr('id_contest')
-                        const table = $(".leadTable")[index];
-                        const contest_id = parseInt($(`.contest[id_contest="${contest_num}"] .contest_header`).eq(0).css('background-image').match(/\d+/g).at(-1))
-                        let contest_data = '';
+                    const $contests = $(`.ranking.over_panel${active ? '' : '.ended'} .closed`)
+                    $contests.attr('tooltip', '')
+                    $contests.attr('hh_title', 'Copy Contest')
+                    $contests.append(`<img src="https://${cdnHost}/design/ic_books_gray.svg">`)
 
-                        for(let i=0;i<table.childElementCount;i++){
-                            const row = table.children[i]
-                            let flag = row.children[1].children[0].getAttribute("hh_title")
-                            const translation = flag_fr.indexOf(flag)
-                            if (translation > -1) {
-                                flag = flag_en[translation]
-                            }
+                    types.forEach((type) => {
+                        contests[type].forEach((contest) => {
+                            const {id_contest, category_type, id_contest_type, participants} = contest
+                            const output = Object.values(participants).sort((a,b) => a.rank-b.rank).map((participant) => {
+                                const {rank, country_text, id_member, nickname, contest_points} = participant
+                                const translation = flag_fr.indexOf(country_text)
+                                const flag = translation > -1 ? flag_en[translation] : country_text
+                                return `${category_type === 'daily' ? `${id_contest_type}\t${rank}\t` : ''}${[flag, id_member, nickname, contest_points].join('\t')}`
+                            }).join('\n')
 
-                            if (contest_id < 16) {
-                                contest_data += `${contest_id}\t${i+1}\t`
-                            }
-                            contest_data+=flag+"\t";
-                            contest_data+=row.getAttribute("sorting_id")+"\t";
-                            contest_data+=row.children[1].innerText.slice(1).replace(/\n|\t/g,'')+"\t";
-                            contest_data+=row.children[2].innerText.match(/\d+/g).join('')+"\n";
-                        }
-                        copyText(contest_data)
+                            $(`.ranking.over_panel[id_contest=${id_contest}] .closed`).click(() => {
+                                copyText(output)
+                            })
+                        })
                     })
                 })
 
@@ -2020,17 +2019,15 @@
                 .ranking .closed {
                     cursor: pointer;
                 }`)
-                if (active) {
-                    sheet.insertRule(`
-                    #contests>div>div.right_part>.ranking:not(.ended)>.closed {
-                        display: unset!important;
-                        font-size: 0!important;
-                        position: absolute!important;
-                        right: 1rem!important;
-                        left: unset!important;
-                        top: 5.75rem!important;
-                    }`)
-                }
+                sheet.insertRule(`
+                #contests>div>div.right_part>.ranking:not(.ended)>.closed {
+                    display: unset!important;
+                    font-size: 0!important;
+                    position: absolute!important;
+                    right: 1rem!important;
+                    left: unset!important;
+                    top: 5.75rem!important;
+                }`)
             })
 
             this.hasRun = true
