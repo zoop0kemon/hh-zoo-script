@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.7.3
+// @version         0.7.4
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.7.4: Updating url to league page after 17/01 game update
 // 0.7.3: Changing LR leaderboards copy format, fixing some bugs, and adding support for TPSH and GPSH
 // 0.7.2: Fixing Copy Contests module
 // 0.7.1: Fixing compact market style tweak
@@ -933,7 +934,7 @@
         }
 
         shouldRun () {
-            return currentPage.includes('tower-of-fame')
+            return currentPage.includes('leagues')
         }
 
         recordData () {
