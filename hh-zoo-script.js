@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.7.4
+// @version         0.8.0
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.8.0: Adding module to log labyrinth info to the console
 // 0.7.4: Updating url to league page after 17/01 game update
 // 0.7.3: Changing LR leaderboards copy format, fixing some bugs, and adding support for TPSH and GPSH
 // 0.7.2: Fixing Copy Contests module
@@ -934,7 +935,7 @@
         }
 
         shouldRun () {
-            return currentPage.includes('leagues')
+            return currentPage.includes('leagues.html')
         }
 
         recordData () {
@@ -2986,6 +2987,154 @@
         }
     }
 
+    class labyrinthData extends HHModule {
+        constructor () {
+            const baseKey = 'LabyrinthData'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `Console Log Labyrinth Data`,
+                subSettings: [{
+                    key: 'grid',
+                    label: `Log grid layout info`,
+                    default: false
+
+                }, {
+                    key: 'pre_battle',
+                    label: `Log pre-battle data`,
+                    default: false
+                }, {
+                    key: 'battle',
+                    label: `Log battle data`,
+                    default: true
+                }, {
+                    key: 'relic',
+                    label: 'Log relic choice info',
+                    default: true
+                }]
+            }
+            super({name: baseKey, configSchema})
+        }
+
+        shouldRun () {
+            return currentPage.includes('labyrinth')
+        }
+
+        run ({grid, pre_battle, battle, relic}) {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            $(document).ready(() => {
+                if (currentPage.includes('labyrinth-battle') && battle) {
+                    const {hero_fighter_v4, opponent_fighter_v4} = window
+                    console.log(hero_fighter_v4)
+                    console.log(opponent_fighter_v4)
+                    HHPlusPlus.Helpers.onAjaxResponse(/action=do_battles_labyrinth/i, (response) => {
+                        console.log(response)
+                    })
+                } else if (currentPage.includes('labyrinth-pre-battle') && pre_battle) {
+                    const {hero_fighter, opponent_fighter} = window
+                    console.log(hero_fighter)
+                    console.log(opponent_fighter)
+                } else if (currentPage.includes('labyrinth.html')) {
+                    if (grid) {
+                        const {labyrinth_grid} = window
+                        Object.values(labyrinth_grid.floors).forEach((floor) => {
+                            if (!Object.values(floor.rows[2].hexes).some(hex => hex.type === 'hero')) {
+                                const HEX_KEYS = {
+                                    'treasure': 'T',
+                                    'shrine': 'R',
+                                    'opponent_super_easy': 'S',
+                                    'opponent_easy': 'E',
+                                    'opponent_medium': 'M',
+                                    'opponent_hard': 'H',
+                                    'opponent_boss': 'B'
+                                }
+
+                                const grid = []
+                                Object.values(floor.rows).forEach((row, r) => {
+                                    if (r != 0 && r != 10) {
+                                        const hexes = Object.values(row.hexes)
+                                        const temp = Array(3).fill('')
+                                        const hex_map = hexes.length === 3 ? [2, 1, 0] : [2, 0]
+
+                                        hexes.forEach((hex, h) => {
+                                            temp[hex_map[h]] = HEX_KEYS[hex.type]
+                                        })
+                                        grid.push(temp.join('\t'))
+                                    }
+                                })
+                                console.log(grid.join('\n'))
+                            }
+                        })
+                    }
+
+                    if (relic) {
+                        const RELIC_KEYS = {
+                            "girl_impactful": 'IM',
+                            "girl_egoist": 'EG',
+                            "girl_harmony": 'SH',
+                            "girl_defender": 'DH',
+                            "girl_critical": 'CT',
+                            "girl_dodge": 'DM',
+                            "girl_leech": 'ER',
+                            "girl_double_attack": 'DA',
+                            "girl_first_in_line": 'FL',
+                            "girl_backline": 'BB',
+                            "team_impactful": 'IM',
+                            "team_egoist": 'EG',
+                            "team_harmony": 'SH',
+                            "team_defender": 'DH',
+                            "team_critical": 'CT',
+                            "team_critical_expectation": 'CX',
+                            "team_defender_frontline": 'FD',
+                            "team_harmony_middle": 'HM',
+                            "team_impactful_back": 'AB',
+                            "team_impactful_dominatrix": 'DO',
+                            "team_impactful_submissive": 'SU',
+                            "team_impactful_voyeur": 'VO',
+                            "team_impactful_eccentric": 'EC',
+                            "team_impactful_exhibitionist": 'EX',
+                            "team_impactful_physical": 'PH',
+                            "team_impactful_playful": 'PL',
+                            "team_impactful_sensual": 'SE',
+                            "team_hex": 'CU',
+                            "team_executioner": 'FM',
+                            "team_healthy": 'VM',
+                            "team_berserk": 'BK',
+                            "team_protective": 'PB',
+                            "team_elimination": 'DM',
+                            "team_shield": 'PA',
+                            "team_rejuvenation": 'RJ'
+                        }
+                        const relics = []
+                        HHPlusPlus.Helpers.onAjaxResponse(/action=labyrinth_get_member_relics/i, (response) => {
+                            if (response.unclaimed_relics) {
+                                relics.push(...response.unclaimed_relics)
+                            }
+                        })
+                        HHPlusPlus.Helpers.onAjaxResponse(/action=labyrinth_pick_unclaimed_relic/i, (response, opt) => {
+                            const searchParams = new URLSearchParams(opt.data)
+                            const picked_relic = parseInt(searchParams.get('id_relic_unclaimed'))
+                            const index = relics.findIndex(({id_member_relic_unclaimed}) => id_member_relic_unclaimed === picked_relic) + 1
+
+                            const relic_keys = []
+                            relics.forEach((relic) => {
+                                const girl = relic.girl ? relic.girl.id_girl : ''
+                                const relic_key = RELIC_KEYS[relic.identifier]
+                                const rarity = relic.rarity[0]
+                                relic_keys.push(`${girl}${relic_key}${rarity}`)
+                            })
+                            relic_keys.push(index)
+                            console.log(relic_keys.join('\t'))
+                        })
+                    }
+                }
+            })
+
+            this.hasRun = true
+        }
+    }
+
     const allModules = [
         new GirlDataRecord(),
         new LeagueDataCollector(),
@@ -2995,7 +3144,8 @@
         new HaremTweaks(),
         new VillainDrops(),
         new ChampDrops(),
-        new CopyLeaderboard()
+        new CopyLeaderboard(),
+        new labyrinthData()
     ]
 
     setTimeout(() => {
