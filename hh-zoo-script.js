@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.8.0
+// @version         0.9.0
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.0: Rewriting Girl Data Record after harem update
 // 0.8.0: Adding module to log labyrinth info to the console
 // 0.7.4: Updating url to league page after 17/01 game update
 // 0.7.3: Changing LR leaderboards copy format, fixing some bugs, and adding support for TPSH and GPSH
@@ -325,7 +326,7 @@
         lsRm('WaifuInfo')
     }
 
-    function copyText(text) {
+    function copyText (text) {
         navigator.clipboard.writeText(text).catch(e => {
             let textArea = document.createElement("textarea");
             textArea.style.position = 'fixed';
@@ -351,8 +352,21 @@
             document.body.removeChild(textArea);
         })
     }
-    function capFirst(string) {
+    function capFirst (string) {
         return string.charAt(0).toUpperCase()+string.slice(1);
+    }
+    function nthNumber (number) {
+        if (number > 3 && number < 21) {return 'th'}
+        switch (number % 10) {
+            case 1:
+                return 'st'
+            case 2:
+                return 'nd'
+            case 3:
+                return 'rd'
+            default:
+                return 'th'
+        }
     }
 
     class STModule {
@@ -409,12 +423,22 @@
                     key: 'desc',
                     label: `Record ${gameConfig.Girl} Description`,
                     default: false
+                }, {
+                    key: 'cxh',
+                    label: 'Format data for CxH sheet',
+                    default: false
+                }, {
+                    key: 'wiki',
+                    label: 'Format data for Wiki',
+                    default: false
                 }]
             }
             super({name: baseKey, configSchema})
 
-            this.newGirlNotif = $('<span class="new-girl-notif"></span>')
-            this.changesNotif = $('<span class="button-notification-icon button-notification-action"></span>')
+            this.girlData = lsGet('GirlData') || {}
+            this.girlRefData = lsGet('GirlRefData') || {}
+            this.newGirls = lsGet('NewGirls') || []
+            this.dataChanges = lsGet('DataChanges') || []
 
             this.fields = {
                 name: 'Name',
@@ -436,9 +460,12 @@
                 fetish: 'Fetish',
                 style: 'Style',
                 desc: 'Description',
-                ref_id: 'Ref ID'
+                ref_id: 'Ref ID',
+                salaries: 'Salary Info',
+                hc: 'Base HC',
+                ch: 'Base CH',
+                kh: 'Base KH',
             }
-
             this.trait_map = {
                 'fire': 'Eye Color',
                 'nature': 'Hair Color',
@@ -452,119 +479,296 @@
         }
 
         shouldRun () {
-            return currentPage.includes('harem') && !currentPage.includes('hero')
+            return currentPage.includes('edit-team') || currentPage.includes('waifu.html') || currentPage.includes('activities') || (currentPage.includes('harem') && !currentPage.includes('hero'))
         }
 
         cleanData (string) {
-            if (string == null) {
-                return ''
+            if (typeof string !== 'string') {
+                return null
             }
-            return string.replace(/^ +/,'').replace(/ +$/,'')
+            return string.replaceAll('\r', '').replaceAll('\n', '').trim()
         }
 
-        getGirlInfo (id) {
-            const {girlsDataList, GT} = window
-            const girl = girlsDataList[id]
-            const ref = girl.ref
-            const element = girl.element
-            //const girl_class = all_possible_girls[id].class
-            //const pose = GT.figures[all_possible_girls[id].figure];
-            const pose = GT.figures[girl.figure] || '';
-            const stars = (girl.graded2.match(/\<\/g\>/g) || []).length
+        updateGirlData (girl) {
+            const {id_girl, name, element, class: girl_class, rarity, nb_grades: stars, figure: pose, hair_color1, hair_color2, eye_color1, eye_color2, zodiac, id_girl_ref: ref_id, carac1, carac2, carac3, salaries, reference, blessed_attributes} = girl
+            const {full_name, anniversary, location, career, hobby_food, hobby_hobby, hobby_fetish, desc} = reference || {}
 
-            let girlInfo = {
-                name: girl.name,
-                full_name: this.cleanData(ref.full_name),
-                element: GT.design[element+'_flavor_element'],
-                class: GT.caracs[girl.class],
-                rarity: capFirst(girl.rarity),
-                stars: stars,
-                trait: stars < 3 ? 'None' : this.trait_map[element],
-                pose: pose == "Doggie style" ? "Doggie Style" : pose,
-                hair: ref.hair.replaceAll(/<(.*?)>/g,''),
-                eyes: ref.eyes.replaceAll(/<(.*?)>/g,''),
-                zodiac: ref.zodiac,
-                birthday: ref.anniv.replace('  ',' '),
-                location: this.cleanData(ref.location),
-                career: this.cleanData(ref.career),
-                food: ref.hobbies.food,
-                hobby: ref.hobbies.hobby,
-                fetish: ref.hobbies.fetish,
-                style: GT.design['girl_style_'+element+'_'+girl.class],
-                desc: (this.desc && ref.desc) ? this.cleanData(ref.desc.replaceAll('\n','')) : '',
-                ref_id: ref.id_girl_ref
+            const girl_data = {
+                name: this.cleanData(name),
+                element,
+                class: girl_class,
+                rarity: capFirst(rarity),
+                stars,
+                pose,
+                ref_id,
+                salaries,
+                hc: blessed_attributes ? null : carac1,
+                ch: blessed_attributes ? null : carac2,
+                kh: blessed_attributes ? null : carac3
+            }
+            const ref_data = {
+                full_name: this.cleanData(full_name),
+                desc: this.desc ? this.cleanData(desc) : null,
+                location: this.cleanData(location),
+                career: this.cleanData(career),
+                birthday: anniversary?.replace(/^\d{4}-/, ''),
+                zodiac,
+                hair: [hair_color1, hair_color2].filter(color => !!color).join(','),
+                eyes: [eye_color1, eye_color2].filter(color => !!color).join(','),
+                food: this.cleanData(hobby_food),
+                hobby: this.cleanData(hobby_hobby),
+                fetish: this.cleanData(hobby_fetish)
             }
 
-            return girlInfo
-        }
+            const old_girl_data = this.girlData[id_girl]
+            const old_ref_data = this.girlRefData[ref_id]
+            const old_formated = (old_ref_data && old_girl_data) ? this.formatGirlData(id_girl) : {}
+            const new_formated = this.formatGirlData(id_girl, girl_data, ref_data)
+            const pre_harem_update = old_girl_data && old_girl_data.full_name != null
+            let changed = false
 
-        printGirl (id, girl) {
-            let copyText = ''
-            for (const [key, value] of Object.entries(girl)) {
-                if (this.desc || key!='desc') {
-                    copyText += `${value}${key != 'ref_id' ? '\t' : '\n'}`;
-                    if (key == 'name') {
-                        copyText += `${id}\t`
+            if (old_girl_data && !pre_harem_update) {
+                for (const [key, new_value] of Object.entries(girl_data)) {
+                    const old_value = old_girl_data[key]
+                    if (new_value == null) {
+                        // remove undfined/null values to merge
+                        delete girl_data[key]
+                    } else if (old_value != new_value) {
+                        if (old_value) {
+                            const date = Date.now()
+                            this.dataChanges.push({
+                                id: id_girl,
+                                field: key,
+                                old: old_formated[key],
+                                new: new_formated[key],
+                                date
+                            })
+                            // secondary changes
+                            if (key === 'element' || key === 'stars') {
+                                this.dataChanges.push({
+                                    id: id_girl,
+                                    field: 'trait',
+                                    old: old_formated.trait,
+                                    new: new_formated.trait,
+                                    date
+                                })
+                            }
+                            if (key === 'element' || key === 'class') {
+                                this.dataChanges.push({
+                                    id: id_girl,
+                                    field: 'style',
+                                    old: old_formated.style,
+                                    new: new_formated.style,
+                                    date
+                                })
+                            }
+                        }
+                        changed = true
+                    }
+                }
+            } else {
+                if (!pre_harem_update) {
+                    this.newGirls.push(id_girl)
+                    lsSet('NewGirls', this.newGirls)
+                }
+                changed = true
+            }
+            if (old_ref_data) {
+                for (const [key, new_value] of Object.entries(ref_data)) {
+                    const old_value = old_ref_data[key]
+                    if (new_value == null) {
+                        // remove undefined/null values to merge
+                        delete ref_data[key]
+                    } else if (old_value != new_value) {
+                        if (old_value || (old_ref_data.full_name && old_ref_data.location == null)) {
+                            const date = Date.now()
+                            Object.entries(this.girlData).filter(([girl_id, girl]) => girl.ref_id == ref_id).forEach(([ref_id_girl]) => {
+                                this.dataChanges.push({
+                                    id: ref_id_girl,
+                                    field: key,
+                                    old: old_formated[key],
+                                    new: new_formated[key],
+                                    date
+                                })
+                            })
+                        }
+                        changed = true
                     }
                 }
             }
-            return copyText
+
+            this.girlData[id_girl] = Object.assign({}, pre_harem_update ? {} : old_girl_data, girl_data)
+            this.girlRefData[ref_id] = Object.assign({}, old_ref_data || {}, ref_data)
+            if (changed) {
+                lsSet('GirlData', this.girlData)
+                lsSet('GirlRefData', this.girlRefData)
+                lsSet('DataChanges', this.dataChanges)
+            }
+            return changed
         }
 
-        buildNewGirlList (newGirls) {
-            const {girlsDataList} = window
-            let list = ''
-            for (let i=0;i<newGirls.length;i++){
-                if (girlsDataList[newGirls[i]]) {
-                    list += `<li>${girlsDataList[newGirls[i]].name}</li>`
+        formatGirlData (girl_id, new_girl_data=null, new_ref_data=null) {
+            const {GT} = window
+            const girl = new_girl_data || this.girlData[girl_id]
+            const {ref_id, class: girl_class, element, pose, stars} = girl
+            const ref_data = new_ref_data || this.girlRefData[ref_id]
+            const {hair, eyes, birthday} = ref_data || {}
+            const girl_data = Object.assign({}, girl, ref_data, {style: GT.design[`girl_style_${element}_${girl_class}`], trait: stars < 3 ? 'None' : this.trait_map[element]})
+
+            girl_data.element = GT.design[`${element}_flavor_element`]
+            girl_data.class = GT.caracs[girl_class]
+            girl_data.pose = GT.figures[pose] === 'Doggie style' ? 'Doggie Style' : GT.figures[pose]
+            girl_data.hair = hair?.split(',').map(color => GT.colors[color]).join(' and ')
+            girl_data.eyes = eyes?.split(',').map(color => GT.colors[color]).join(' and ')
+            if (birthday) {
+                const birth_date = new Date(1990, ...birthday.split('-'))
+                const day = parseInt(birthday.split('-')[1])
+                girl_data.birthday = `${birth_date.toLocaleString('en', {month: 'long'})} ${day}${nthNumber(day)}`
+            }
+            Object.keys(girl_data).forEach((key) => {
+                if (girl_data[key] == null) {
+                    girl_data[key] = ''
+                }
+            })
+
+            return girl_data
+        }
+
+        printGirlData (girl_id) {
+            const girl_data = this.formatGirlData(girl_id)
+            const {ref_id, name, full_name, element, class: girl_class, rarity, stars, trait, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style, desc, salaries, hc, ch, kh} = girl_data
+            const salary_info = salaries?.split('|').map((income) => {
+                const income_info = income.split(',').map(n => parseInt(n))
+                const pay = income_info[0].toLocaleString('en')
+                const time = income_info[1].toLocaleString('en')
+                const rate = Math.ceil(income_info[0] / (income_info[1] / 60)).toLocaleString('en')
+                return {pay, time, rate}
+            }) || []
+
+            if (!this.wiki) {
+                const data_list = [name, girl_id, full_name, element, girl_class, rarity, stars, trait, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style]
+                if (this.cxh) {
+                    data_list.push(desc)
+                }
+                data_list.push(ref_id, '')
+                if (this.cxh) {
+                    const incomes = [0, 1, 2, 3, 4, 5, 6].map(star => star>stars ? '' : (salary_info[star]?.pay || ''))
+                    const rates = [0, 1, 2, 3, 4, 5, 6].map(star => star>stars ? '' : (salary_info[star]?.rate || ''))
+                    data_list.push('', ...incomes, ...rates)
+                }
+                data_list.push(...[hc, ch, kh].map(stat => (stat/10).toFixed(1)))
+
+                return data_list.join('\t')
+            } else {
+                const wiki_name = name.replaceAll("’", "'")
+
+                if (!isGH) {
+                    return [
+                        '[TEMPLATE]HH:Template_Haremette',
+                        '| New girl warning = no',
+                        `| Nickname = ${wiki_name}`,
+                        `| Name = ${full_name}`,
+                        `| Specialty = ${girl_class}`,
+                        `| Rarity = ${rarity}`,
+                        `| Max stars = ${stars}`,
+                        `| Favorite position = ${pose}`,
+                        `| Element = ${element}`,
+                        `| Derived haremette = `,
+                        `| Hair color = ${hair}`,
+                        `| Eye color = ${eyes}`,
+                        `| Zodiac Sign = ${zodiac}`,
+                        `| Birthday = ${birthday}`,
+                        `| Location = ${location}`,
+                        `| Career = ${career}`,
+                        `| Favorite Food = ${food}`,
+                        `| Hobby = ${hobby}`,
+                        `| Fetish = ${fetish}`,
+                        `| Style = ${style}`,
+                        `| About her = ${desc}`,
+                        '| How to obtain = ',
+                        '| Still obtainable = no',
+                        ...[0, 1, 2, 3, 4, 5, 6].map(star => `| Picture with ${star} Star = `),
+                        ...[0, 1, 2, 3, 4, 5, 6].map(star => {
+                            const income = salary_info[star] || {}
+                            return [`| Income with ${star} Star = ${income.pay || 'X'}$ every ${income.time || 'Y'}min`,
+                                    `| Income with ${star} Star per hour = ${income.rate || ''}`]
+                        }).flat(),
+                        ...[0, 1, 2, 3, 4, 5, 6, 'MAX'].map(star => {
+                            const grade = star === 'MAX' ? stars : star
+                            const level = star === 'MAX' ? 500 : 1
+                            const battle_stats = star === 'MAX' ? 'MAX' : `Star ${star} Level 1`
+                            const stats = [hc, ch, kh].map(stat => grade>stars ? '' : (level * stat/10 * (1 + 0.3*grade)).toLocaleString('en'))
+                            return [`| Battle-stats ${battle_stats} Hardcore = ${stats[0]}`,
+                                    `| Battle-stats ${battle_stats} Charm = ${stats[1]}`,
+                                    `| Battle-stats ${battle_stats} Know-how = ${stats[2]}`]
+                        }).flat(),
+                        ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => [`| Trivia ${n} Description = `, `| Trivia ${n} Image = `]).flat(),
+                        '[/TEMPLATE]'
+                    ].join('\n')
                 } else {
-                    list += `<li>[REMOVED ID:${newGirls[i]}]</li>`
+                    const stats = [hc, ch, kh].map(stat => (stat/10).toLocaleString('en'))
+
+                    return [
+                        '[TEMPLATE]GH:Template_Guy',
+                        `  | Name = ${wiki_name}`,
+                        ...[0, 1, 2, 3, 4, 5, 6].map(star => `  | ${star} Star = `),
+                        `  | Specialty = ${girl_class}`,
+                        `  | Element = ${element}`,
+                        `  | Favorite position = ${pose}`,
+                        `  | Rarity = ${rarity}`,
+                        '  | Obtainable = ',
+                        '  | Obtain World = ',
+                        '  | Obtain Detail = ',
+                        '  | Event Month = ',
+                        '  | Parody = ',
+                        `  | Star 0 Hardcore = ${stats[0]}`,
+                        `  | Star 0 Charm = ${stats[1]}`,
+                        `  | Star 0 Know-how = ${stats[2]}`,
+                        ...[0, 1, 2, 3, 4, 5, 6].map(star => {
+                            const income = salary_info[star]
+                            return [`  | Income ${star} Star = ${income ? `$${income.pay}/${income.time}min` : ''}`,
+                                    `  | Income ${star} Star hour = ${income ? `$${income.rate}/hr` : ''}`]
+                        }).flat(),
+                        '  | Trivia = ',
+                        '  | Parody Image = ',
+                        `  | Real Name = ${full_name}`,
+                        `  | Hair = ${hair}`,
+                        `  | Eyes = ${eyes}`,
+                        `  | Birthday = ${birthday}`,
+                        `  | Location = ${location}`,
+                        `  | Occupation = ${career}`,
+                        `  | Food = ${food}`,
+                        `  | Hobby = ${hobby}`,
+                        `  | Fetish = ${fetish}`,
+                        `  | Bio = ${desc}`,
+                        '[/TEMPLATE]'
+                    ].join('\n')
                 }
             }
-
-            return list
         }
 
-        buildChangesTable (dataChanges) {
-            const {girlsDataList} = window
-            let tableBody = ''
-            for (let i=0;i<dataChanges.length;i++) {
-                let change = dataChanges[i]
-                let date = new Date(change.date)
-                tableBody += `
-                <tr>
-                   <td>${girlsDataList[change.id].name}</td>
-                   <td>${this.fields[change.field]}</td>
-                   <td>${change.old}</td>
-                   <td>${change.new}</td>
-                   <td>${date.getUTCMonth()+1}/${date.getUTCDate()}/${date.getUTCFullYear()}</td>
-                </tr>
-                `
-            }
+        buildDisplay () {
+            // can't identify removed girls anymore
 
-            return tableBody
-        }
-
-        buildDisplay (girlData,newGirls,dataChanges) {
             return (`
                <div class="summary-girl">
                   <h1>${gameConfig.Girl} Data Record:</h1>
-                  <div>${Object.keys(girlData).length} Total <span class="clubGirl_mix_icn"></span> recorded</div>
-                  <div>${newGirls.length} New <span class="clubGirl_mix_icn"></span> recorded</div>
+                  <div><span class="total-girls-count">${Object.keys(this.girlData).length}</span> Total <span class="clubGirl_mix_icn"></span> recorded</div>
+                  <div><span class="new-girls-count">${this.newGirls.length}</span> New <span class="clubGirl_mix_icn"></span> recorded</div>
                   <ul class="data-grid data-buttons">
-                     <li><div><span>Copy All ${gameConfig.Girl}s</span></div></li>
-                     <li><div><span>Copy New ${gameConfig.Girl}s</span></div></li>
-                     <li><div><span>Clear New ${gameConfig.Girl}s</span></div></li>
+                     <li><div class="copy-all-girls"><span>Copy All ${gameConfig.Girl}s</span></div></li>
+                     <li><div class="copy-new-girls"><span>Copy New ${gameConfig.Girl}s</span></div></li>
+                     <li><div class="clear-new-girls"><span>Clear New ${gameConfig.Girl}s</span></div></li>
                   </ul>
                   <ul class="data-grid new-girls">
-                     ${this.buildNewGirlList(newGirls)}
+                     ${this.newGirls.map(girl_id => `<li>${this.girlData[girl_id] ? this.girlData[girl_id].name : `[REMOVED ID:${girl_id}]`}</li>`).join('')}
                   </ul>
                </div>
                <div class="summary-changes">
-                  <h1>${gameConfig.Girl} Data Changes - ${dataChanges.length}</h1>
+                  <h1>${gameConfig.Girl} Data Changes - <span class="data-changes-count">${this.dataChanges.length}</span></h1>
                   <ul class="data-grid changes-buttons">
-                     <li><div><span>Copy All Changes</span></div></li>
-                     <li><div><span>Clear All Changes</span></div></li>
+                     <li><div class="copy-all-changes"><span>Copy All Changes</span></div></li>
+                     <li><div class="clear-all-changes"><span>Clear All Changes</span></div></li>
                   </ul>
                   <table class="girl-data-changes">
                      <thead>
@@ -577,346 +781,330 @@
                         </tr>
                      </thead>
                      <tbody>
-                        ${this.buildChangesTable(dataChanges)}
+                        ${this.dataChanges.map((change) => {
+                            const girl_name = this.girlData[change.id].name
+                            const field_name = this.fields[change.field]
+                            const date = new Date(change.date)
+                            const formated_date = [date.getUTCMonth()+1, date.getUTCDate(), date.getUTCFullYear()].join('/')
+
+                            return `<tr><td>${[girl_name, field_name, change.old, change.new, formated_date].join('</td><td>')}</td><tr>`
+                        }).join('')}
                      </tbody>
                   </table>
                </div>
             `)
         }
 
-        run ({desc}) {
+        initButtons () {
+            $('.data-grid.data-buttons .copy-all-girls').click(() => {
+                const output = Object.keys(this.girlData).map(girl_id => this.printGirlData(girl_id)).join('\n')
+                copyText(output)
+            })
+
+            $('.data-grid.data-buttons .copy-new-girls').click(() => {
+                const output = this.newGirls.map(girl_id => this.printGirlData(girl_id)).join('\n')
+                copyText(output)
+            })
+
+            $('.data-grid.data-buttons .clear-new-girls').click(() => {
+                $('.summary-girl .new-girls-count').html('0')
+                $('.data-grid.new-girls > li').remove()
+                this.$newGirlNotif.hide()
+
+                this.newGirls = []
+                lsSet('NewGirls', this.newGirls)
+            })
+
+            $('.data-grid.new-girls li').each((i, el) => {
+                $(el).click(() => {
+                    const girl_id = this.newGirls[i]
+                    copyText(this.printGirlData(girl_id))
+                })
+            })
+
+            $('.data-grid.changes-buttons .copy-all-changes').click(() => {
+                const output = this.dataChanges.map((change) => {
+                    const girl_name = this.girlData[change.id].name
+                    const field_name = this.fields[change.field]
+                    const date = new Date(change.date)
+                    const date_formated = [date.getUTCMonth()+1, date.getUTCDate(), date.getUTCFullYear()].join('/')
+
+                    return [girl_name, field_name, change.old, change.new, date_formated].join('\t')
+                }).join('\n')
+
+                copyText(output)
+            })
+
+            $('.data-grid.changes-buttons .clear-all-changes').click(() => {
+                $('.summary-changes .data-changes-count').html('0')
+                $('.girl-data-changes > tbody > tr').remove()
+                this.$changesNotif.hide()
+
+                this.dataChanges = []
+                lsSet('DataChanges', this.dataChanges)
+            })
+        }
+
+        run ({desc, cxh, wiki}) {
             if (this.hasRun || !this.shouldRun()) {return}
             this.desc = desc
+            this.cxh = cxh
+            this.wiki = wiki
+            if (!this.desc) {
+                Object.keys(this.girlRefData).forEach(key => {
+                    this.girlRefData[key].desc = null
+                })
+                lsSet('GirlRefData', this.girlRefData)
+            }
 
             $(document).ready(() => {
-                const {girlsDataList} = window
-                const girlIDs = Object.keys(girlsDataList)
-                let girlData = lsGet('GirlData') || {}
-                let newGirls = lsGet('NewGirls') || []
-                let dataChanges = lsGet('DataChanges') || []
+                if (currentPage.includes('activities')) {
+                    const {pop_hero_girls} = window
+                    if (!pop_hero_girls) { return }
+                    Object.values(pop_hero_girls).forEach((girl) => {
+                        this.updateGirlData(girl)
+                    })
+                }
+                if (currentPage.includes('edit-team')) {
+                    const {availableGirls} = window
+                    Object.values(availableGirls).forEach((girl) => {
+                        this.updateGirlData(girl)
+                    })
+                }
+                if (currentPage.includes('waifu.html')) {
+                    const {girlsDataList} = window
+                    Object.values(girlsDataList).forEach((girl) => {
+                        this.updateGirlData(girl)
+                    })
+                }
+                if (currentPage.includes('harem') && !currentPage.includes('hero')) {
+                    const checked_girls = []
 
-                for (let i=0;i<girlIDs.length;i++) {
-                    const id = girlIDs[i]
-                    if (girlData[id]) {
-                        const oldData = girlData[id]
-                        const newData = this.getGirlInfo(id)
-                        let changes = 0;
-
-                        for (const [key, value] of Object.entries(newData)) {
-                            if (value!=oldData[key]) {
-                                if (!((['desc', 'trait', 'pose'].includes(key)) && (value=='' || oldData[key]==''))) {//change back once pose is back
-                                    dataChanges.push({
-                                        id: id,
-                                        field: key,
-                                        old: oldData[key],
-                                        new: value,
-                                        date: Date.now()
-                                    })
-                                }
-                                changes++
+                    HHPlusPlus.Helpers.onAjaxResponse(/action=girls_get_list/i, ({girls_list}) => {
+                        let changed = false
+                        Object.values(girls_list).forEach((girl) => {
+                            const {id_girl} = girl
+                            if (!checked_girls.includes(id_girl)) {
+                                checked_girls.push(id_girl)
+                                const this_changed = this.updateGirlData(girl)
+                                changed = changed || this_changed
                             }
+                        })
+                        if (changed) {
+                            $('.girl-data-panel').html(this.buildDisplay())
+                            this.initButtons()
+                            if (this.newGirls.length) {this.$newGirlNotif.show()}
+                            if (this.dataChanges.length) {this.$changesNotif.show()}
                         }
+                    })
 
-                        if (changes>0) {
-                            girlData[id] = newData
+                    HHPlusPlus.Helpers.onAjaxResponse(/action=get_girl&/i, ({girl: {girl}}) => {
+                        const changed = this.updateGirlData(girl)
+                        if (changed) {
+                            $('.girl-data-panel').html(this.buildDisplay())
+                            this.initButtons()
+                            if (this.newGirls.length) {this.$newGirlNotif.show()}
+                            if (this.dataChanges.length) {this.$changesNotif.show()}
                         }
-                    } else {
-                        newGirls.push(id)
-                        girlData[id] = this.getGirlInfo(id)
-                    }
-                }
-
-                lsSet('GirlData',girlData)
-                lsSet('NewGirls',newGirls)
-                lsSet('DataChanges',dataChanges)
-
-                const $button = $('<div class="girl-data-panel-toggle harem"></div>')
-                $button.append(this.newGirlNotif).append(this.changesNotif)
-                const $panel = $(`<div class="girl-data-panel">${this.buildDisplay(girlData,newGirls,dataChanges)}</div>`)
-                const $overlayBG = $('<div class="girl-data-overlay-bg"></div>')
-                $('#harem_left').append($button).append($panel).append($overlayBG)
-
-                if (newGirls.length==0){
-                    this.newGirlNotif.addClass('hide')
-                }
-                if (dataChanges.length==0){
-                    this.changesNotif.addClass('hide')
-                }
-
-                $button.click(() => {
-                    if ($panel.hasClass('visible')) {
-                        $panel.removeClass('visible')
-                        $overlayBG.removeClass('visible')
-                    } else {
-                        $panel.addClass('visible')
-                        $overlayBG.addClass('visible')
-                    }
-                })
-
-                $overlayBG.click(() => {
-                    $panel.removeClass('visible')
-                    $overlayBG.removeClass('visible')
-                })
-
-                //copy all girls
-                $('.data-grid.data-buttons > li>div').eq(0).click(() => {
-                    let text = ''
-                    girlIDs.forEach(element => {
-                        text += this.printGirl(element, girlData[element])
                     })
-                    copyText(text)
-                })
 
-                //copy new girls
-                $('.data-grid.data-buttons > li>div').eq(1).click(() => {
-                    let text = ''
-                    newGirls.forEach(element => {
-                        text += this.printGirl(element, girlData[element])
+                    const $button = $('<div class="girl-data-panel-toggle harem"></div>')
+                    this.$newGirlNotif = $('<span class="new-girl-notif"></span>')
+                    this.$changesNotif = $('<span class="button-notification-icon button-notification-action"></span>')
+                    const $panel = $(`<div class="girl-data-panel">${this.buildDisplay()}</div>`).hide()
+                    const $overlayBG = $('<div class="girl-data-overlay-bg"></div>').hide()
+
+                    if (!this.newGirls.length) {this.$newGirlNotif.hide()}
+                    if (!this.dataChanges.length) {this.$changesNotif.hide()}
+                    $button.append(this.$newGirlNotif).append(this.$changesNotif)
+                    HHPlusPlus.Helpers.doWhenSelectorAvailable('#harem_left', () => {
+                        $('#harem_left').append($button).append($panel).append($overlayBG)
+
+                        $button.click(() => {
+                            $panel.toggle()
+                            $overlayBG.toggle()
+                        })
+
+                        $overlayBG.click(() => {
+                            $panel.toggle()
+                            $overlayBG.toggle()
+                        })
+
+                        this.initButtons()
                     })
-                    copyText(text)
-                })
 
-                //clear new girls
-                $('.data-grid.data-buttons > li>div').eq(2).click(() => {
-                    let counter=$('.summary-girl div')[1]
-                    let girlList = $('.data-grid.new-girls')[0]
-
-                    this.newGirlNotif.addClass('hide')
-                    counter.innerHTML=`0${/ New(.+)/.exec(counter.innerHTML)[0]}`
-                    while (girlList.firstChild) {
-                        girlList.removeChild(girlList.firstChild);
-                    }
-
-                    newGirls = []
-                    lsSet('NewGirls',newGirls)
-                })
-
-                //copy each girl
-                $('.data-grid.new-girls li').each(function (index) {
-                    $(this).click(() => {
-                        let text = ''
-                        const girl = girlData[newGirls[index]]
-                        for (const [key, value] of Object.entries(girl)) {
-                            if (desc || key!='desc') {
-                                text += `${value}${key != 'ref_id' ? '\t' : '\n'}`;
-                                if (key == 'name') {
-                                    text += `${newGirls[index]}\t`
-                                }
-                            }
-                        }
-                        copyText(text)
-                    })
-                })
-
-                //copy all changes
-                $('.data-grid.changes-buttons > li>div').eq(0).click(() => {
-                    let text = ''
-                    for (let i=0;i<dataChanges.length;i++) {
-                        const change = dataChanges[i]
-                        let date = new Date(change.date)
-                        text += `${girlsDataList[change.id].name}\t${this.fields[change.field]}\t${change.old}\t${change.new}\t${date.getUTCMonth()+1}/${date.getUTCDate()}/${date.getUTCFullYear()}\n`
-                    }
-                    copyText(text)
-                })
-
-                //clear all changes
-                $('.data-grid.changes-buttons > li>div').eq(1).click(() => {
-                    let counter = $('.summary-changes h1')[0]
-                    let changeList = $('.girl-data-changes > tbody')[0]
-
-                    this.changesNotif.addClass('hide')
-                    counter.innerHTML=`${/(.+) - /.exec(counter.innerHTML)[0]}0`
-                    while (changeList.firstChild) {
-                        changeList.removeChild(changeList.firstChild);
-                    }
-
-                    dataChanges = []
-                    lsSet('DataChanges',dataChanges)
-                })
-
-                sheet.insertRule(`
-                .girl-data-panel-toggle {
-                    display: block;
-                    position: absolute;
-                    height: 32px;
-                    width: 32px;
-                    background-size: contain;
-                    bottom: 15px;
-                    right: 6px;
-                    cursor: pointer;
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel-toggle:hover {
-                    filter: drop-shadow(0px 0px 1px white);
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel {
-                    display: none;
-                    background-color: #080808f5;
-                    color: #fff;
-                    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
-                    font-weight: 400;
-                    position: absolute;
-                    bottom: 50px;
-                    left: 10px;
-                    z-index: 20;
-                    border-radius: 5px;
-                    border-width: 5px;
-                    border-style: solid;
-                    border-color: #cccccc42;
-                    padding: 8px;
-                    grid-gap: 10px;
-                    grid-template-columns: 200px 700px;
-                    max-height: 400px;
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel.visible {
-                    display: grid;
-                }`);
-                sheet.insertRule(`
-                .girl-data-overlay-bg {
-                    display: none;
-                    width: 100vw;
-                    height: 100%;
-                    position: absolute;
-                    top: 0px;
-                    left: 0px;
-                    z-index: 19;
-                }`);
-                sheet.insertRule(`
-                .girl-data-overlay-bg.visible {
-                    display: block;
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel-toggle.harem {
-                    background-image: url(https://${cdnHost}/pictures/design/harem.svg);
-                }`);
-                sheet.insertRule(`
-                .new-girl-notif {
-                    display: block;
-                    width: 14px;
-                    height: 28px;
-                    background-image: url(https://${cdnHost}/ic_new.png);
-                    background-size: 18px;
-                    background-position: center;
-                    background-repeat: no-repeat;
-                    margin: 0;
-                    padding: 0;
-                    animation: new_notif_anim 7s infinite;
-                    position: relative;
-                    right: 15px;
-                    bottom: 10px;
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel-toggle .hide {
-                    display: none;
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel h1{
-                    font-size: 20px;
-                }`);
-                sheet.insertRule(`
-                .summary-changes h1 {
-                    display: inline-block;
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel .data-grid {
-                    display: grid;
-                    grid-gap: 6px;
-                    list-style: none;
-                    padding-left: 0px;
-                    margin-block-end: 0px;
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel .data-grid li {
-                    display: inline-block;
-                    background: #cccccc42;
-                    border-radius: 5px;
-                    line-height: 15px;
-                    margin-left: 10px;
-                    cursor: pointer;
-                }`);
-                sheet.insertRule(`
-                .girl-data-panel .data-grid li>div {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }`);
-                sheet.insertRule(`
-                .summary-girl .data-grid.data-buttons {
-                    grid-template-columns: 1fr 1fr 1fr;
-                    text-align: center;
-                    font-size: 10px;
-                }`);
-                sheet.insertRule(`
-                .summary-girl .data-grid.new-girls {
-                    overflow-y: scroll;
-                    max-height: 245px;
-                    margin-top: 10px;
-                }`);
-                sheet.insertRule(`
-                .summary-girl .data-grid.new-girls li{
-                    margin-left: 0px;
-                    margin-right: 4px;
-                    padding: 2px;
-                }`);
-                sheet.insertRule(`
-                .summary-changes .data-grid {
-                    font-size: 10px;
-                    float: right;
-                    position: relative;
-                    grid-template-columns: 1fr 1fr;
-                    margin-block-start: 0px;
-                    text-align: center;
-                    right: 35px;
-                }`);
-                sheet.insertRule(`
-                .summary-changes .data-grid span {
-                    width: 50px;
-                }`);
-                sheet.insertRule(`
-                .girl-data-changes {
-                    border-collapse: separate;
-                    border-spacing: 2px 2px;
-                    font-size: 12px;
-                    width: 100%;
-                }`);
-                sheet.insertRule(`
-                .girl-data-changes th, .girl-data-changes td {
-                    padding: 0px 5px;
-                    vertical-align: middle;
-                    background: #cccccc42;
-                }`);
-                sheet.insertRule(`
-                .girl-data-changes thead tr {
-                    display: block;
-                    font-size: 16px;
-                }`);
-                sheet.insertRule(`
-                .girl-data-changes tbody {
-                    display: block;
-                    max-height: 305px;
-                    overflow-y: scroll;
-                    user-select: text;
-                }`);
-                sheet.insertRule(`
-                .girl-data-changes tr > *:nth-child(1) {
-                    width: 100px;
-                }`);
-                sheet.insertRule(`
-                .girl-data-changes tr > *:nth-child(2),
-                .girl-data-changes tr > *:nth-child(5) {
-                    width: 70px;
-                }`);
-                sheet.insertRule(`
-                .girl-data-changes tr > *:nth-child(3),
-                .girl-data-changes tr > *:nth-child(4) {
-                    width: 210px;
-                }`);
-                sheet.insertRule(`
-                .girl-data-changes tbody tr > *:nth-child(5) {
-                    text-align: right;
-                }`);
+                    sheet.insertRule(`
+                    .girl-data-panel-toggle {
+                        display: block;
+                        position: absolute;
+                        height: 32px;
+                        width: 32px;
+                        background-size: contain;
+                        bottom: 15px;
+                        right: 6px;
+                        cursor: pointer;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-panel-toggle:hover {
+                        filter: drop-shadow(0px 0px 1px white);
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-panel {
+                        display: grid;
+                        background-color: #080808f5;
+                        color: #fff;
+                        font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
+                        font-weight: 400;
+                        position: absolute;
+                        bottom: 50px;
+                        left: 10px;
+                        z-index: 20;
+                        border-radius: 5px;
+                        border-width: 5px;
+                        border-style: solid;
+                        border-color: #cccccc42;
+                        padding: 8px;
+                        grid-gap: 10px;
+                        grid-template-columns: 200px 700px;
+                        max-height: 400px;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-overlay-bg {
+                        display: block;
+                        width: 100vw;
+                        height: 100%;
+                        position: absolute;
+                        top: 0px;
+                        left: 0px;
+                        z-index: 19;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-panel-toggle.harem {
+                        background-image: url(https://${cdnHost}/pictures/design/harem.svg);
+                    }`);
+                    sheet.insertRule(`
+                    .new-girl-notif {
+                        display: block;
+                        width: 14px;
+                        height: 28px;
+                        background-image: url(https://${cdnHost}/ic_new.png);
+                        background-size: 18px;
+                        background-position: center;
+                        background-repeat: no-repeat;
+                        margin: 0;
+                        padding: 0;
+                        animation: new_notif_anim 7s infinite;
+                        position: relative;
+                        right: 15px;
+                        bottom: 10px;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-panel h1{
+                        font-size: 20px;
+                    }`);
+                    sheet.insertRule(`
+                    .summary-changes h1 {
+                        display: inline-block;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-panel .data-grid {
+                        display: grid;
+                        grid-gap: 6px;
+                        list-style: none;
+                        padding-left: 0px;
+                        margin-block-end: 0px;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-panel .data-grid li {
+                        display: inline-block;
+                        background: #cccccc42;
+                        border-radius: 5px;
+                        line-height: 15px;
+                        margin-left: 10px;
+                        cursor: pointer;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-panel .data-grid li>div {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }`);
+                    sheet.insertRule(`
+                    .summary-girl .data-grid.data-buttons {
+                        grid-template-columns: 1fr 1fr 1fr;
+                        text-align: center;
+                        font-size: 10px;
+                    }`);
+                    sheet.insertRule(`
+                    .summary-girl .data-grid.new-girls {
+                        overflow-y: scroll;
+                        max-height: 245px;
+                        margin-top: 10px;
+                    }`);
+                    sheet.insertRule(`
+                    .summary-girl .data-grid.new-girls li{
+                        margin-left: 0px;
+                        margin-right: 4px;
+                        padding: 2px;
+                    }`);
+                    sheet.insertRule(`
+                    .summary-changes .data-grid {
+                        font-size: 10px;
+                        float: right;
+                        position: relative;
+                        grid-template-columns: 1fr 1fr;
+                        margin-block-start: 0px;
+                        text-align: center;
+                        right: 35px;
+                    }`);
+                    sheet.insertRule(`
+                    .summary-changes .data-grid span {
+                        width: 50px;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-changes {
+                        border-collapse: separate;
+                        border-spacing: 2px 2px;
+                        font-size: 12px;
+                        width: 100%;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-changes th, .girl-data-changes td {
+                        padding: 0px 5px;
+                        vertical-align: middle;
+                        background: #cccccc42;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-changes thead tr {
+                        display: block;
+                        font-size: 16px;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-changes tbody {
+                        display: block;
+                        max-height: 305px;
+                        overflow-y: scroll;
+                        user-select: text;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-changes tr > *:nth-child(1) {
+                        width: 100px;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-changes tr > *:nth-child(2),
+                    .girl-data-changes tr > *:nth-child(5) {
+                        width: 70px;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-changes tr > *:nth-child(3),
+                    .girl-data-changes tr > *:nth-child(4) {
+                        width: 210px;
+                    }`);
+                    sheet.insertRule(`
+                    .girl-data-changes tbody tr > *:nth-child(5) {
+                        text-align: right;
+                    }`);
+                }
             })
 
             this.hasRun = true
