@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.0
+// @version         0.9.1
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.1: Fixing bug with Girl Data Record printing birthdates with incorrect months
 // 0.9.0: Rewriting Girl Data Record after harem update
 // 0.8.0: Adding module to log labyrinth info to the console
 // 0.7.4: Updating url to league page after 17/01 game update
@@ -621,7 +622,9 @@
             girl_data.hair = hair?.split(',').map(color => GT.colors[color]).join(' and ')
             girl_data.eyes = eyes?.split(',').map(color => GT.colors[color]).join(' and ')
             if (birthday) {
-                const birth_date = new Date(1990, ...birthday.split('-'))
+                const birthday_info = birthday.split('-').map(n => parseInt(n))
+                birthday_info[0] -= 1
+                const birth_date = new Date(1990, ...birthday_info)
                 const day = parseInt(birthday.split('-')[1])
                 girl_data.birthday = `${birth_date.toLocaleString('en', {month: 'long'})} ${day}${nthNumber(day)}`
             }
@@ -653,10 +656,15 @@
                 data_list.push(ref_id, '')
                 if (this.cxh) {
                     const incomes = [0, 1, 2, 3, 4, 5, 6].map(star => star>stars ? '' : (salary_info[star]?.pay || ''))
-                    const rates = [0, 1, 2, 3, 4, 5, 6].map(star => star>stars ? '' : (salary_info[star]?.rate || ''))
+                    const rates = [0, 1, 2, 3, 4, 5, 6].map(star => star>stars ? '' : (salary_info[star]?.time || ''))
                     data_list.push('', ...incomes, ...rates)
                 }
                 data_list.push(...[hc, ch, kh].map(stat => (stat/10).toFixed(1)))
+                data_list.forEach((info, i) => {
+                    if (typeof info === 'string' && info.includes('"')) {
+                        data_list[i] = `"${info.replaceAll('"', '""')}"`
+                    }
+                })
 
                 return data_list.join('\t')
             } else {
@@ -917,7 +925,7 @@
                     if (!this.newGirls.length) {this.$newGirlNotif.hide()}
                     if (!this.dataChanges.length) {this.$changesNotif.hide()}
                     $button.append(this.$newGirlNotif).append(this.$changesNotif)
-                    HHPlusPlus.Helpers.doWhenSelectorAvailable('#harem_left', () => {
+                    HHPlusPlus.Helpers.doWhenSelectorAvailable('#harem_left .buttons_container', () => {
                         $('#harem_left').append($button).append($panel).append($overlayBG)
 
                         $button.click(() => {
