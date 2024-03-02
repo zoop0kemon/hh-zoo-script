@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.1
+// @version         0.9.2
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.2: Updating Girl Data Record after 28/02 game update
 // 0.9.1: Fixing bug with Girl Data Record printing birthdates with incorrect months
 // 0.9.0: Rewriting Girl Data Record after harem update
 // 0.8.0: Adding module to log labyrinth info to the console
@@ -523,7 +524,7 @@
 
             const old_girl_data = this.girlData[id_girl]
             const old_ref_data = this.girlRefData[ref_id]
-            const old_formated = (old_ref_data && old_girl_data) ? this.formatGirlData(id_girl) : {}
+            const old_formated = this.formatGirlData(id_girl, old_girl_data || {}, old_ref_data || {})
             const new_formated = this.formatGirlData(id_girl, girl_data, ref_data)
             const pre_harem_update = old_girl_data && old_girl_data.full_name != null
             let changed = false
@@ -888,7 +889,7 @@
                 if (currentPage.includes('harem') && !currentPage.includes('hero')) {
                     const checked_girls = []
 
-                    HHPlusPlus.Helpers.onAjaxResponse(/action=girls_get_list/i, ({girls_list}) => {
+                    HHPlusPlus.Helpers.onAjaxResponse(/action=get_girls_list/i, ({girls_list}) => {
                         let changed = false
                         Object.values(girls_list).forEach((girl) => {
                             const {id_girl} = girl
