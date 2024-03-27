@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.2
+// @version         0.9.3
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.3: Updating script for game bundler change
 // 0.9.2: Updating Girl Data Record after 28/02 game update
 // 0.9.1: Fixing bug with Girl Data Record printing birthdates with incorrect months
 // 0.9.0: Rewriting Girl Data Record after harem update
@@ -83,8 +84,8 @@
     const currentPage = location.pathname
 
     if (!$) {
-        console.log('WARNING: No jQuery found. Probably an error page. Ending the script here');
-        return;
+        console.log('WARNING: No jQuery found. Probably an error page. Ending the script here')
+        return
     }
 
     // Game detection
@@ -1139,16 +1140,16 @@
             const {opponents_list} = window
             if (opponents_list && opponents_list.length) {
                 const oldLeagueData = lsGet('LeagueRecord')
-                let leagueData = {date: new Date(), playerList: [], banned: []}
+                const leagueData = {date: new Date(), playerList: [], banned: []}
 
                 if (oldLeagueData) {
-                    let banned = oldLeagueData.banned || []
-                    const leagueResults = lsGet('LeagueResults', 'HHPlusPlus')
-                    if (leagueResults) {
-                        Object.entries(leagueResults).forEach(([id])=>{if(!oldLeagueData.playerList.some(e=>e.id==id)){banned.push(id)}});
-                    }
-                    oldLeagueData.playerList.forEach(({id})=>{if(!opponents_list.some(e=>e.player.id_fighter==id)){banned.push(id)}});
-                    leagueData.banned = [... new Set(banned)]
+                    const {banned} = oldLeagueData
+                    oldLeagueData.playerList.forEach(({id}) => {
+                        if (!opponents_list.some(({player}) => player.id_fighter == id)) {
+                            banned.push(id)
+                        }
+                    })
+                    leagueData.banned = [...new Set(banned)]
                 }
 
                 opponents_list.forEach(({country_text, player, player_league_points}) => {
@@ -1166,7 +1167,7 @@
                         points: player_league_points
                     })
                 })
-                leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1);
+                leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1)
 
                 lsSet('LeagueRecord', leagueData)
             }
@@ -1181,8 +1182,9 @@
 
             let text = leagueData ? `${new Date(leagueData.date).toUTCString()}${leagueData.banned.length>0 ? '\tBanned: ' : ''}${leagueData.banned.join(', ')}\n` : 'No Data Found';
             if (leagueData) {
+                const {shared: {Hero: {infos: {id: hero_id}}}} = window
                 leagueData.playerList.forEach((player) => {
-                    const isSelf = player.id == Hero.infos.id
+                    const isSelf = player.id == hero_id
                     let row = Object.values(player).join('\t')
 
                     if (extra) {
@@ -1207,9 +1209,9 @@
                     }
 
                     if (extra && isSelf) {
-                        prow = row;
+                        prow = row
                     } else {
-                        text += `${row}\n`;
+                        text += `${row}\n`
                     }
                 })
             }
@@ -1221,13 +1223,14 @@
             if (this.hasRun || !this.shouldRun()) {return}
 
             $(document).ready(() => {
+                const {server_now_ts, season_end_at} = window
                 const leagueEndTime = server_now_ts + season_end_at
                 const storedEndTime = lsGet('LeagueEnd')
 
                 if (!storedEndTime) {
                     lsSet('LeagueEnd', leagueEndTime)
                 } else if (leagueEndTime > storedEndTime) {
-                    lsSet('OldLeagueRecord',lsGet('LeagueRecord'))
+                    lsSet('OldLeagueRecord', lsGet('LeagueRecord'))
                     lsRm('LeagueRecord')
                     lsSet('LeagueEnd', leagueEndTime)
                 }
@@ -1328,12 +1331,13 @@
         }
 
         countSummary(pachinko_log, type_info, time_start, time_end) {
+            const {shared: {Hero: {infos: {level}}}} = window
             let pachinko_type = type_info.match(/\D+/)[0]
 
             let summary = {time_start: time_start, time_end: time_end, total: 0}
             pachinko_log.forEach((roll) => {
                 let drops = roll.split(',')
-                if (pachinko_type != 'great' || ((Hero.infos.level<100 && drops[1]<100) || (Hero.infos.level>99 && drops[1]>99))) {
+                if (pachinko_type != 'great' || ((level<100 && drops[1]<100) || (level>99 && drops[1]>99))) {
                     const time = parseInt(drops[0])
                     if (time > time_start && time < time_end) {
                         drops.slice(pachinko_type != 'great'? 1 : 2).forEach((item) => {
@@ -1366,24 +1370,25 @@
         }
 
         buildSummary(type_info, summary) {
-            let type = type_info.match(/\D+/)[0]
-            let games = type!='event' ? type_info.match(/\d+/)[0] : 4
-            let no_girls = type_info.slice(-2) == 'ng' ? true : false
-            let rewards = games>1 ? !(type=='equipment' && games<10) && (type!='event' && (!no_girls || type=='great')) ? games-1 : games : 1
-            let reward_keys = this.reward_keys
+            const {shared: {Hero: {infos: {level}}}} = window
+            const type = type_info.match(/\D+/)[0]
+            const games = type!='event' ? type_info.match(/\d+/)[0] : 4
+            const no_girls = type_info.slice(-2) == 'ng' ? true : false
+            const rewards = games>1 ? !(type=='equipment' && games<10) && (type!='event' && (!no_girls || type=='great')) ? games-1 : games : 1
+            const reward_keys = this.reward_keys
             const no_girls_summary = no_girls || (games>1 && (type!='great' && type!='event')) || (games==1 && type=='great') || (type=='equipment')
             const no_mythic_equip_summary = !((summary.time_start == this.pool_updates[0].time) && ((type == 'mythic' && games == 1) || (type == 'event')))
             const girl_equip_image = summary.time_end == this.pool_updates[1].time ? `https://${cdnHost}/design/girl_armor/girl_armor.png` : 'images/pictures/design/pachinko/ic_girl_armor_tooltip_icon.png'
 
             function getPct(item) {
-                let cat = reward_keys.type[item[0]]
+                const cat = reward_keys.type[item[0]]
                 if (item.includes('rarity')) {
                     item = item.slice(1)
                 }
-                let isTotal = item.length == 1 && item != 'g'
+                const isTotal = item.length == 1 && item != 'g'
 
-                let count = summary[cat]? summary[cat][isTotal? 'total' : item] || 0 : 0
-                let pct = (100*count/(summary.total * (cat!='gems'? ['great', 'event', 'equipment'].includes(type) ? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
+                const count = summary[cat]? summary[cat][isTotal? 'total' : item] || 0 : 0
+                const pct = (100*count/(summary.total * (cat!='gems'? ['great', 'event', 'equipment'].includes(type) ? (cat=='girls'? 1 : games) : rewards : 1))).toFixed(2)
 
                 return(`<span ${(item.includes('rarity') || isTotal)?`class="side-sum${isTotal? ' cat-sum': ''}" ` : ''}tooltip hh_title="${count}">${pct}%</span>`)
             }
@@ -1430,7 +1435,7 @@
                             `<div class="side-sum-container">
                                 ${getPct('X')}
                             </div>`}
-                            ${(type=='great' && Hero.infos.level<100)? '' :
+                            ${(type=='great' && level<100)? '' :
                             `<div class="side-sum-container">
                                 ${getPct('Xrarity-L')}
                             </div>
@@ -1474,7 +1479,7 @@
                                     ${getPct('XP4E')}
                                 </li>
                             </ul>
-                            ${Hero.infos.level>99? '' :
+                            ${level>99? '' :
                             `<div class="side-sum-container">
                                 ${getPct('Xrarity-R')}
                             </div>
@@ -1503,7 +1508,7 @@
                             `<div class="side-sum-container">
                                ${getPct('K')}
                             </div>`}
-                            ${(type=='great' && Hero.infos.level<100)? '' :
+                            ${(type=='great' && level<100)? '' :
                             `<div class="side-sum-container">
                                ${getPct('Krarity-L')}
                             </div>
@@ -1547,7 +1552,7 @@
                                     ${getPct('K4E')}
                                 </li>
                             </ul>
-                            ${Hero.infos.level>99? '' :
+                            ${level>99? '' :
                             `<div class="side-sum-container">
                                 ${getPct('Krarity-R')}
                             </div>
@@ -1596,11 +1601,11 @@
                         </div>`}
                         ${type == 'mythic' || (type =='epic' && games == '1') || (type == 'equipment' && summary.time_end!=this.pool_updates[1].time)? '' :
                         `<div class="summary-div">
-                            ${!((type == 'great' && (Hero.infos.level>=100 && games == '1' || games == '10')) || (type == 'equipment'))? '' :
+                            ${!((type == 'great' && (level>=100 && games == '1' || games == '10')) || (type == 'equipment'))? '' :
                             `<div class="side-sum-container">
                                 ${getPct('E')}
                             </div>`}
-                            ${(Hero.infos.level<100 && type == 'great' && games == '1')? '' :
+                            ${(level<100 && type == 'great' && games == '1')? '' :
                             `<div class="side-sum-container">
                                 ${getPct('Erarity-L')}
                             </div>
@@ -1640,7 +1645,7 @@
                                     ${getPct('EE')}
                                 </li>
                             </ul>
-                            ${(games == '1' && Hero.infos.level>99)? '' :
+                            ${(games == '1' && level>99)? '' :
                             `<ul class="summary-grid equips-summary rare">
                                 <li>
                                     <img alt="Equip" tooltip hh_title="Rare Equip" src="https://${cdnHost}/pictures/items/EH1.png">
@@ -1894,7 +1899,8 @@
             if (this.hasRun || !this.shouldRun()) {return}
 
             $(document).ready(() => {
-                let no_girls = {};
+                const {pachinkoDef} = window
+                let no_girls = {}
                 pachinkoDef.forEach((pachinko) => {
                     no_girls[pachinko.type] = pachinko.content.rewards.girl_shards? false : true
                 });
@@ -2144,7 +2150,10 @@
                     let pachinko_log = lsGet('PachinkoLog') || {}
                     if(!pachinko_log[plist]) {pachinko_log[plist] = [];}
                     let roll = [new Date().getTime()]
-                    if (type == 'great') {roll.push(Hero.infos.level)}
+                    if (type == 'great') {
+                        const {shared: {Hero: {infos: {level}}}} = window
+                        roll.push(level)
+                    }
 
                     if (rewards.shards) {
                         let girl_ids = []
@@ -2343,7 +2352,7 @@
 
                 sheet.insertRule(`
                 .right-container .player-inventory-content {
-                    width: 27rem!important;
+                    width: 26rem!important;
                     height: 24.5rem!important;
                     align-content: flex-start;
                 }`)
@@ -2438,6 +2447,10 @@
                     justify-content: unset!important;
                     margin-left: 1.5rem;
                     max-width: unset!important;
+                }`)
+                sheet.insertRule(`
+                #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-boosters-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .booster .slot-container:nth-child(4n), #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-equipement-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .armor .slot-container:nth-child(4n), #shops .shop-container .content-container #equipement-tab-container .my-inventory-container .armor .slot-container:nth-child(4n), #shops .shop-container .content-container #boosters-tab-container .my-inventory-container .booster .slot-container:nth-child(4n), #shops .shop-container .content-container #books-tab-container .my-inventory-container .potion .slot-container:nth-child(4n), #shops .shop-container .content-container #gifts-tab-container .my-inventory-container .gift .slot-container:nth-child(4n) {
+                    margin-right: 0.5rem;
                 }`)
                 sheet.insertRule(`
                 .my-hero-switch-content .my-inventory-container .armor {
@@ -2659,7 +2672,7 @@
                                 if (isMulti) {
                                     const club_info = lsGet('ClubStatus', 'HHPlusPlus') || {'upgrades': {'soft_currency_gain': {'bonus': 0}}}
                                     const sc_bonus = 1 + club_info.upgrades.soft_currency_gain.bonus
-                                    const {Hero} = window
+                                    const {shared: {Hero}} = window
                                     const sc_count = parseInt(response.rewards.heroChangesUpdate.currency.soft_currency) - parseInt(Hero.currencies.soft_currency)
                                     const sc_per = (villain_level*100 + 500) * sc_bonus
                                     drop_count = Math.round(sc_count/sc_per) // round to be safe
@@ -3148,7 +3161,7 @@
                         return [row.potions, row.rank, row.id_member, row.nickname].join('\t')
                     }).join('\n')
                     if (hero_data.rank > 1000) {
-                        const {Hero} = window
+                        const {shared: {Hero}} = window
                         this.output += `\n${[hero_data.potions, hero_data.rank, Hero.infos.id, Hero.infos.name].join('\t')}`
                     }
 
@@ -3346,7 +3359,9 @@
     ]
 
     setTimeout(() => {
-        if (window.hhPlusPlusConfig) {
+        const {hhPlusPlusConfig} = window
+
+        if (hhPlusPlusConfig) {
             hhPlusPlusConfig.registerGroup({
                 key: 'zoo',
                 name: 'Zoo\'s Scripts'
@@ -3356,6 +3371,8 @@
             })
             hhPlusPlusConfig.loadConfig()
             hhPlusPlusConfig.runModules()
+        } else if (!(['/integrations/', '/index.php'].some(path => path === location.pathname) && location.hostname.includes('nutaku'))) {
+            console.log('WARNING: HH++ BDSM not found. Ending the script here')
         }
     }, 1)
 })()
