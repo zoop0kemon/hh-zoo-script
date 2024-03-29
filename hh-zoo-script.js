@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.3
+// @version         0.9.4
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.4: Fixing script for revert to game bundler change
 // 0.9.3: Updating script for game bundler change
 // 0.9.2: Updating Girl Data Record after 28/02 game update
 // 0.9.1: Fixing bug with Girl Data Record printing birthdates with incorrect months
@@ -1182,7 +1183,7 @@
 
             let text = leagueData ? `${new Date(leagueData.date).toUTCString()}${leagueData.banned.length>0 ? '\tBanned: ' : ''}${leagueData.banned.join(', ')}\n` : 'No Data Found';
             if (leagueData) {
-                const {shared: {Hero: {infos: {id: hero_id}}}} = window
+                const {Hero: {infos: {id: hero_id}}} = window.shared ? window.shared : window
                 leagueData.playerList.forEach((player) => {
                     const isSelf = player.id == hero_id
                     let row = Object.values(player).join('\t')
@@ -1331,7 +1332,7 @@
         }
 
         countSummary(pachinko_log, type_info, time_start, time_end) {
-            const {shared: {Hero: {infos: {level}}}} = window
+            const {Hero: {infos: {level}}} = window.shared ? window.shared : window
             let pachinko_type = type_info.match(/\D+/)[0]
 
             let summary = {time_start: time_start, time_end: time_end, total: 0}
@@ -1370,7 +1371,7 @@
         }
 
         buildSummary(type_info, summary) {
-            const {shared: {Hero: {infos: {level}}}} = window
+            const {Hero: {infos: {level}}} = window.shared ? window.shared : window
             const type = type_info.match(/\D+/)[0]
             const games = type!='event' ? type_info.match(/\d+/)[0] : 4
             const no_girls = type_info.slice(-2) == 'ng' ? true : false
@@ -2151,7 +2152,7 @@
                     if(!pachinko_log[plist]) {pachinko_log[plist] = [];}
                     let roll = [new Date().getTime()]
                     if (type == 'great') {
-                        const {shared: {Hero: {infos: {level}}}} = window
+                        const {Hero: {infos: {level}}} = window.shared ? window.shared : window
                         roll.push(level)
                     }
 
@@ -2672,7 +2673,7 @@
                                 if (isMulti) {
                                     const club_info = lsGet('ClubStatus', 'HHPlusPlus') || {'upgrades': {'soft_currency_gain': {'bonus': 0}}}
                                     const sc_bonus = 1 + club_info.upgrades.soft_currency_gain.bonus
-                                    const {shared: {Hero}} = window
+                                    const {Hero} = window.shared ? window.shared : window
                                     const sc_count = parseInt(response.rewards.heroChangesUpdate.currency.soft_currency) - parseInt(Hero.currencies.soft_currency)
                                     const sc_per = (villain_level*100 + 500) * sc_bonus
                                     drop_count = Math.round(sc_count/sc_per) // round to be safe
@@ -3161,7 +3162,7 @@
                         return [row.potions, row.rank, row.id_member, row.nickname].join('\t')
                     }).join('\n')
                     if (hero_data.rank > 1000) {
-                        const {shared: {Hero}} = window
+                        const {Hero} = window.shared ? window.shared : window
                         this.output += `\n${[hero_data.potions, hero_data.rank, Hero.infos.id, Hero.infos.name].join('\t')}`
                     }
 
