@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.4
+// @version         0.9.5
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.5: Fixing style issues from bundler change
 // 0.9.4: Fixing script for revert to game bundler change
 // 0.9.3: Updating script for game bundler change
 // 0.9.2: Updating Girl Data Record after 28/02 game update
@@ -290,10 +291,20 @@
     const flag_en = ["Andorra", "United Arab Emirates", "Antigua and Barbuda", "Albania", "Armenia", "Netherlands Antilles", "Antarctica", "Argentina", "American Samoa", "Austria", "Australia", "Åland Islands", "Azerbaijan", "Bosnia and Herzegovina", "Barbados", "Belgium", "Bulgaria", "Bahrain", "Benin", "Bermuda", "Brunei Darussalam", "Bolivia", "Brazil", "Bhutan", "Bouvet Island", "Belarus", "Cocos (Keeling) Islands", "Central Africa", "Switzerland", "Ivory Coast", "Cook Islands", "Chile", "Cameroon", "China", "Colombia", "Serbia and Montenegro", "Cape Verde", "Christmas Island", "Cyprus", "Czech", "Germany", "Denmark", "Dominica", "Dominican", "Algeria", "Ecuador", "Estonia", "Egypt", "Western Sahara", "Eritrea", "Spain", "Ethiopia", "Finland", "Fiji", "Falkland Islands", "Micronesia", "Faroe Islands", "United Kingdom", "Grenada", "Georgia", "French Guiana", "Greenland", "Gambia", "Guinea", "Equatorial Guinea", "Greece", "South Georgia and the South Sandwich Islands", "Guinea-Bissau", "Heard Island and McDonald Islands", "Croatia", "Haiti", "Hungary", "Indonesia", "Ireland", "Israel", "Isle of Man", "India", "British Indian Ocean Territory", "Iraq", "Iceland", "Italy", "Jamaica", "Jordan", "Japan", "Kyrgyzstan", "Cambodia", "Comoros", "Saint Kitts and Nevis", "North Korea", "South Korea", "Kuwait", "Cayman Islands", "Lao", "Lebanon", "Saint Lucia", "Liberia", "Lithuania", "Latvia", "Libyan Arab Jamahiriya", "Morocco", "Republic of Moldova", "Montenegro", "Saint-Martin", "Marshall Islands", "FYROM", "Myanmar", "Mongolia", "Northern Mariana Islands", "Mauritania", "Malta", "Mauritius", "Mexico", "Malaysia", "Namibia", "New Caledonia", "Norfolk Island", "Nigeria", "Netherlands", "Norway", "Nepal", "Niue", "New Zealand", "Peru", "French Polynesia", "Papua New Guinea", "Poland", "Saint-Pierre and Miquelon", "Pitcairn", "Puerto Rico", "Occupied Palestinian Territory", "Palau", "Réunion", "Romania", "Serbia", "Russian Federation", "Saudi Arabia", "Solomon Islands", "Sudan", "Sweden", "Singapore", "Saint Helena", "Slovenia", "Svalbard and Jan Mayen", "Slovakia", "San Marino", "Senegal", "Somalia", "South Sudan", "Sao Tome and Principe", "El Salvador", "Syrian", "Turks and Caicos Islands", "Chad", "French Southern Territories", "Thailand", "Tajikistan", "Timor-Leste", "Turkmenistan", "Tunisia", "Turkey", "Trinidad and Tobago", "Taiwan", "Tanzania", "Uganda", "United States Minor Outlying Islands", "United States", "Uzbekistan", "Vatican City State", "Saint Vincent and the Grenadines", "British Virgin Islands", "U.S. Virgin Islands", "Vietnam", "Wallis and Futuna", "Worldwide", "Yemen", "South Africa", "Zambia"]
 
     // Define CSS
-    var sheet = (function() {
-        var style = document.createElement('style');
-        document.head.appendChild(style);
-        return style.sheet;
+    const sheet = (() => {
+        const style = document.createElement('style')
+        style.setAttribute('class', 'zoo-script-style')
+        document.head.appendChild(style)
+        style.sheet.insertRules = (rules) => {
+            rules.replace(/ {4}/g, '').split(/(?<=})\n/g).map(rule => rule.replace(/\n/g, '')).forEach(rule => {
+                try {
+                    style.sheet.insertRule(rule)
+                } catch {
+                    console.log(`Error adding style rules:\n${rule}`)
+                }
+            })
+        }
+        return style.sheet
     })();
 
     function lsGet(key, ls_name=LS_CONFIG_NAME) {
@@ -944,7 +955,7 @@
                         this.initButtons()
                     })
 
-                    sheet.insertRule(`
+                    sheet.insertRules(`
                     .girl-data-panel-toggle {
                         display: block;
                         position: absolute;
@@ -954,12 +965,14 @@
                         bottom: 15px;
                         right: 6px;
                         cursor: pointer;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-panel-toggle:hover {
                         filter: drop-shadow(0px 0px 1px white);
-                    }`);
-                    sheet.insertRule(`
+                    }
+                    .girl-data-panel-toggle.harem {
+                        background-image: url(https://${cdnHost}/pictures/design/harem.svg);
+                    }
+
                     .girl-data-panel {
                         display: grid;
                         background-color: #080808f5;
@@ -978,8 +991,7 @@
                         grid-gap: 10px;
                         grid-template-columns: 200px 700px;
                         max-height: 400px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-overlay-bg {
                         display: block;
                         width: 100vw;
@@ -988,12 +1000,8 @@
                         top: 0px;
                         left: 0px;
                         z-index: 19;
-                    }`);
-                    sheet.insertRule(`
-                    .girl-data-panel-toggle.harem {
-                        background-image: url(https://${cdnHost}/pictures/design/harem.svg);
-                    }`);
-                    sheet.insertRule(`
+                    }
+
                     .new-girl-notif {
                         display: block;
                         width: 14px;
@@ -1008,24 +1016,21 @@
                         position: relative;
                         right: 15px;
                         bottom: 10px;
-                    }`);
-                    sheet.insertRule(`
+                    }
+
                     .girl-data-panel h1{
                         font-size: 20px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .summary-changes h1 {
                         display: inline-block;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-panel .data-grid {
                         display: grid;
                         grid-gap: 6px;
                         list-style: none;
                         padding-left: 0px;
                         margin-block-end: 0px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-panel .data-grid li {
                         display: inline-block;
                         background: #cccccc42;
@@ -1033,32 +1038,29 @@
                         line-height: 15px;
                         margin-left: 10px;
                         cursor: pointer;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-panel .data-grid li>div {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .summary-girl .data-grid.data-buttons {
                         grid-template-columns: 1fr 1fr 1fr;
                         text-align: center;
                         font-size: 10px;
-                    }`);
-                    sheet.insertRule(`
+                    }
+
                     .summary-girl .data-grid.new-girls {
                         overflow-y: scroll;
                         max-height: 245px;
                         margin-top: 10px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .summary-girl .data-grid.new-girls li{
                         margin-left: 0px;
                         margin-right: 4px;
                         padding: 2px;
-                    }`);
-                    sheet.insertRule(`
+                    }
+
                     .summary-changes .data-grid {
                         font-size: 10px;
                         float: right;
@@ -1067,54 +1069,46 @@
                         margin-block-start: 0px;
                         text-align: center;
                         right: 35px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .summary-changes .data-grid span {
                         width: 50px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-changes {
                         border-collapse: separate;
                         border-spacing: 2px 2px;
                         font-size: 12px;
                         width: 100%;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-changes th, .girl-data-changes td {
                         padding: 0px 5px;
                         vertical-align: middle;
                         background: #cccccc42;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-changes thead tr {
                         display: block;
                         font-size: 16px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-changes tbody {
                         display: block;
                         max-height: 305px;
                         overflow-y: scroll;
                         user-select: text;
-                    }`);
-                    sheet.insertRule(`
+                    }
+
                     .girl-data-changes tr > *:nth-child(1) {
                         width: 100px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-changes tr > *:nth-child(2),
                     .girl-data-changes tr > *:nth-child(5) {
                         width: 70px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-changes tr > *:nth-child(3),
                     .girl-data-changes tr > *:nth-child(4) {
                         width: 210px;
-                    }`);
-                    sheet.insertRule(`
+                    }
                     .girl-data-changes tbody tr > *:nth-child(5) {
                         text-align: right;
-                    }`);
+                    }`)
                 }
             })
 
@@ -1259,18 +1253,16 @@
                     })
                 })
 
-                sheet.insertRule(`
+                sheet.insertRules(`
                 .record_league {
                     cursor: pointer;
-                }`);
-                sheet.insertRule(`
+                }
                 .record_league >span#last_week {
                     opacity: 0.75;
-                }`);
-                sheet.insertRule(`
-                #leagues .league_content .league_buttons .challenge_points {
+                }
+                #league #leagues .league_content .league_buttons .challenge_points {
                     margin-right: 1.5rem;
-                }`);
+                }`)
             })
 
             this.hasRun = true
@@ -1786,14 +1778,12 @@
         }
 
         attachLog () {
-            $('.nicescroll-rails.nicescroll-rails-vr').removeClass('hide')
             const $button = $('<div class="blue_circular_btn pachinko-log-btn"><span class="info_icn"></span></div>')
-            const $panel = $(`<div class="pachinko-log-panel">${this.buildSummaries()}</div>`)
+            const $panel = $(`<div class="pachinko-log-panel hh-scroll">${this.buildSummaries()}</div>`)
             const $overlayBG = $('<div class="pachinko-log-overlay-bg"></div>')
             $('#playzone-replace-info').append($button).append($panel).append($overlayBG)
 
             $button.click(() => {
-                $('.nicescroll-rails.nicescroll-rails-vr').toggleClass('hide')
                 if ($panel.hasClass('visible')) {
                     $panel.removeClass('visible')
                     $overlayBG.removeClass('visible')
@@ -1804,7 +1794,6 @@
             })
 
             $overlayBG.click(() => {
-                $('.nicescroll-rails.nicescroll-rails-vr').toggleClass('hide')
                 $panel.removeClass('visible')
                 $overlayBG.removeClass('visible')
             })
@@ -1920,23 +1909,18 @@
                     observer.observe($('#pachinko_whole')[0], {childList: true})
                 }
 
-                sheet.insertRule(`
-                .nicescroll-rails.nicescroll-rails-vr.hide {
-                    display: none!important;
-                }`)
-                sheet.insertRule(`
-                .pachinko-log-btn {
+                sheet.insertRules(`
+                #pachinko_whole .playing-zone .wrapper {
+                    overflow: visible;
+                }
+                #pachinko_whole .pachinko-log-btn {
                    position: absolute;
                    top: 2px;
                    right: 44px;
                    width: 35px;
                    height: 35px;
-                }`)
-                sheet.insertRule(`
-                .playing-zone .wrapper {
-                    overflow: visible;
-                }`);
-                sheet.insertRule(`
+                }
+
                 .pachinko-log-overlay-bg {
                     display: none;
                     width: 150%;
@@ -1945,8 +1929,7 @@
                     top: -10%;
                     left: -25%;
                     z-index: 51;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-log-panel {
                     display: none;
                     background-color: #080808f5;
@@ -1967,95 +1950,79 @@
                     grid-template-columns: auto;
                     max-height: 470px;
                     overflow-y: auto;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-log-overlay-bg.visible {
                     display: block;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-log-panel.visible {
                     display: grid;
-                }`);
-                sheet.insertRule(`
+                }
+
                 .summary-header {
                     display: grid;
                     grid-template-columns: 32px 1fr 50px 32px;
                     grid-gap: 10px;
                     align-content: center;
                     justify-items: center;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-log-panel h1 {
                     text-align: center;
                     font-size: 1.4em;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-summary.event h1 {
                     color: #62d8ff;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-summary.epic h1 {
                     color: #ffa23e;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-summary.mythic h1 {
                     color: #ffb80a;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-summary.great h1 {
                     color: #0bff08;
-                }`);
-                sheet.insertRule(`
+                }
                 .pachinko-summary.equipment h1 {
                     color: #e02dc8;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-header img {
                     width: 32px;
                     height: 32px;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-header .sample-count {
                     background-position: center;
                     text-align: center;
                     text-shadow: 2px 2px 2px black;
                     padding-top: 10px;
-                }`);
-                sheet.insertRule(`
+                }
+
                 .summary-body {
                     display: grid;
                     grid-template-columns: 1fr 1em 1fr;
                     text-align: center;
                     align-items: center;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-body.great {
                     grid-template-columns: 1fr;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-body.equipment {
                     grid-template-columns: 1fr;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-div, .summary-div-special {
                     display: flex;
                     flex-wrap: nowrap;
                     flex-direction: row;
                     justify-content: center;
                     align-items: center;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-div-special {
                     gap: 10px;
-                }`);
-                sheet.insertRule(`
+                }
                 .side-sum-container {
                     width: 1.5em;
                     overflow: visible;
                     display: flex;
                     justify-content: center;
-                }`);
-                sheet.insertRule(`
+                }
                 .rewards-summary .side-sum {
                     -webkit-transform: rotate(-90deg);
                     -moz-transform: rotate(-90deg);
@@ -2063,12 +2030,11 @@
                     -o-transform: rotate(-90deg);
                     font-size: 14px;
                     display: inline-block;
-                }`);
-                sheet.insertRule(`
+                }
                 .side-sum.cat-sum {
                     font-size: 16px;
-                }`);
-                sheet.insertRule(`
+                }
+
                 .summary-grid {
                     display: grid;
                     list-style: none;
@@ -2080,55 +2046,45 @@
                     font-size: 12px;
                     flex-basis: 0;
                     gap: 2px;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-grid img {
                     width: 40px;
                     height: 40px;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-grid.mythic img {
                     background: transparent radial-gradient(closest-side at 50% 50%,#f5a866 0,#ec0039 51%,#9e0e27 100%) 0 0 no-repeat padding-box;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-grid.legendary img {
                     background-image: url(https://${cdnHost}/legendary.png);
                     background-size: contain;
                     background-color: #9150bf;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-grid.epic img {
                     background: #ffb244;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-grid.rare img {
                     background: #23b56b;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-grid.common img {
                     background: #8d8e9f;
-                }`);
-                sheet.insertRule(`
+                }
+
                 .equips-summary.legendary {
                     grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
-                }`);
-                sheet.insertRule(`
+                }
                 .epic .equips-summary.legendary {
                     width: 164px;
-                }`);
-                sheet.insertRule(`
+                }
                 .event .equips-summary.legendary {
                     width: 168px;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-grid.girls-summary, .summary-grid.mythic-equip-summary {
                     grid-template-columns: min-content;
-                }`);
-                sheet.insertRule(`
+                }
                 .summary-grid.gems-summary {
                     grid-gap: 0px;
                     align-self: start;
-                }`);
+                }`)
 
                 // record pachinko drops
                 const elm_abrv = {
@@ -2249,7 +2205,7 @@
         run ({active}) {
             if (this.hasRun || !this.shouldRun()) {return}
 
-            HHPlusPlus.Helpers.defer(() => {
+            $(document).ready(() => {
                 HHPlusPlus.Helpers.doWhenSelectorAvailable('#contests .right_part', () => {
                     const {contests} = window
                     const types = ['finished']
@@ -2279,18 +2235,16 @@
                     })
                 })
 
-                sheet.insertRule(`
+                sheet.insertRules(`
                 #contests>div>div.right_part .closed>img {
                     width: 20px;
                     height: 28px;
                     margin-top: 0px;
                     margin-left: 10px;
-                }`)
-                sheet.insertRule(`
+                }
                 .ranking .closed {
                     cursor: pointer;
-                }`)
-                sheet.insertRule(`
+                }
                 #contests>div>div.right_part>.ranking:not(.ended)>.closed {
                     display: unset!important;
                     font-size: 0!important;
@@ -2351,78 +2305,64 @@
                 observer.observe($('.player-inventory-content')[1], {childList: true})
                 observer.observe($('.my-inventory-container .booster')[0], {childList: true})
 
-                sheet.insertRule(`
+                sheet.insertRules(`
                 .right-container .player-inventory-content {
                     width: 26rem!important;
                     height: 24.5rem!important;
                     align-content: flex-start;
-                }`)
-                sheet.insertRule(`
+                }
                 .right-container .player-inventory-content.armor {
-                    height: 24rem!important;
-                }`)
-                sheet.insertRule(`
-                .player-inventory-content .nicescroll-rails {
-                    right: 15px!important;
-                }`)
-                sheet.insertRule(`
+                    height: 23.5rem!important;
+                }
                 .merchant-inventory-container {
                     margin-top: 6rem;
-                }`)
-                sheet.insertRule(`
+                }
                 .left-container .bottom-container {
                     position: absolute;
                     top: 7rem;
-                }`)
-                sheet.insertRule(`
+                }
                 .right-container .bottom-container {
                     position: absolute;
                     top: -4rem;
                     left: 40rem;
                     width: auto!important;
-                }`)
+                }
+                .left-container .top-container {
+                    width: 17.5rem!important;
+                }
 
-                sheet.insertRule(`
-                .tab-booster .my-inventory {
-                    width: 27rem!important;
-                }`)
-                sheet.insertRule(`
-                .tab-armor .my-inventory {
-                    width: 29rem!important;
-                }`)
-                sheet.insertRule(`
-                .tab-booster .equiped-items {
-                    width: 16rem!important;
-                }`)
-                sheet.insertRule(`
-                .tab-armor .equiped-items {
-                    width: 14rem!important;
-                }`)
-                sheet.insertRule(`
                 .market-girl-container, .hero-img, .equiped-booster-text {
                     display: none;
-                }`)
-                sheet.insertRule(`
+                }
+                .tab-booster .my-inventory {
+                    width: 27rem!important;
+                }
+                .tab-armor .my-inventory {
+                    width: 29rem!important;
+                }
+                .tab-booster .equiped-items {
+                    width: 16rem!important;
+                }
+                .tab-armor .equiped-items {
+                    width: 14rem!important;
+                }
                 .armor-container {
                     width: 12rem!important;
-                }`)
-                sheet.insertRule(`
+                }
                 .booster-container {
                     width: 14rem!important;
-                }`)
-                sheet.insertRule(`
+                }
                 .booster-container .booster {
                     margin-right: unset!important;
                     margin-left: 1rem!important;
                     margin-top: 1rem!important;
                     width: 12rem!important;
                     height: 12rem;
-                }`)
-                sheet.insertRule(`
+                }
                 .booster-container .booster .slot {
                     margin-bottom: unset!important;
-                }`)
-                sheet.insertRule(`
+                }
+
                 .my-inventory .bottom-container {
                     position: absolute;
                     z-index: 100;
@@ -2432,40 +2372,34 @@
                     bottom: 5.25rem!important;
                     height: 4.5rem;
                     width: 7.5rem;
-                }`)
-                sheet.insertRule(`
+                }
                 .tab-booster .my-inventory .bottom-container {
                     left: 45.25rem!important;
-                }`)
-                sheet.insertRule(`
+                }
                 .blue_text_button[disabled][rel="levelup"] {
                     display: none;
-                }`)
-                sheet.insertRule(`
+                }
+
                 .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .armor, .my-hero-switch-content .my-inventory-container .booster {
                     align-content: flex-start;
                     width: 24rem!important;
                     justify-content: unset!important;
                     margin-left: 1.5rem;
                     max-width: unset!important;
-                }`)
-                sheet.insertRule(`
+                }
                 #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-boosters-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .booster .slot-container:nth-child(4n), #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-equipement-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .armor .slot-container:nth-child(4n), #shops .shop-container .content-container #equipement-tab-container .my-inventory-container .armor .slot-container:nth-child(4n), #shops .shop-container .content-container #boosters-tab-container .my-inventory-container .booster .slot-container:nth-child(4n), #shops .shop-container .content-container #books-tab-container .my-inventory-container .potion .slot-container:nth-child(4n), #shops .shop-container .content-container #gifts-tab-container .my-inventory-container .gift .slot-container:nth-child(4n) {
                     margin-right: 0.5rem;
-                }`)
-                sheet.insertRule(`
+                }
                 .my-hero-switch-content .my-inventory-container .armor {
                     margin-left: 3.5rem!important;
-                }`)
-                sheet.insertRule(`
+                }
                 .my-hero-switch-content .my-inventory-container, .my-hero-switch-content .my-inventory-container .booster {
                     height: 22rem!important;
-                }`)
-                sheet.insertRule(`
+                }
                 .my-hero-switch-content .my-inventory-container .armor {
                     height: 21.5rem!important;
-                }`)
-                sheet.insertRule(`
+                }
+
                 .armor-container .armor {
                     display: flex;
                     flex-wrap: wrap;
@@ -2475,56 +2409,38 @@
                     width: 10rem;
                     margin-left: 1.5rem;
                     margin-top: 1rem;
-                }`)
-                sheet.insertRule(`
+                }
                 .armor-container .armor .slot-container {
                     position: unset!important;
                     width: 60px!important;
                     height: 60px!important;
-                }`)
-                sheet.insertRule(`
+                }
                 .armor-container .armor .slot {
                     width: 60px!important;
                     height: 60px!important;
-                }`)
-                sheet.insertRule(`
+                }
                 .equiped-items .slot.potential::after, .equiped-items .slot.selected::after, .equiped-items .slot.using::after {
                     width: 66px!important;
                     height: 66px!important;
                     top: -4px!important;
                     left: -4px!important;
                 }`)
-                sheet.insertRule(`
-                 #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-boosters-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .booster .nicescroll-rails {
-                    right: 22.5rem!important;
-                }`)
-                sheet.insertRule(`
-                #shops .shop-container .content-container #my-hero-tab-container .my-hero-switch-content #my-hero-equipement-tab-container .my-inventory-equipement-container .my-inventory .my-inventory-container .armor .nicescroll-rails {
-                    right: 21rem!important;
-                }`)
-                sheet.insertRule(`
-                #shops .left-container .top-container {
-                    width: 17.5rem!important;
-                }`)
 
-                sheet.insertRule(`
-                .my-inventory-container .inventoryInfo {
-                    right: 18px !important;
-                }`)
-
-                //css rules for HH++ equip filter
-                sheet.insertRule(`
+                //css rules for HH++ equip filter and market info
+                sheet.insertRules(`
                 #my-hero-equipement-tab-container label.equip_filter {
                     left: 17.5rem!important;
                     z-index: 4;
-                }`)
-                sheet.insertRule(`
+                }
                 #my-hero-equipement-tab-container .equip_filter_box {
                     left: 13rem!important;
-                }`)
-                sheet.insertRule(`
+                }
                 #my-hero-equipement-tab-container .equip_filter_box.resonance {
                     left: 6rem!important;
+                }
+
+                .my-inventory-container .inventoryInfo {
+                    right: 18px !important;
                 }`)
             })
 
@@ -2552,15 +2468,15 @@
 
             $(document).ready(() => {
                 if (currentPage.includes('harem') && !currentPage.includes('hero')) {
-                    sheet.insertRule(`
-                    #harem_left div.girls_list.grid_view div[girl]>.left>.icon span {
+                    sheet.insertRules(`
+                    #harem_whole #harem_left div.girls_list.grid_view div[girl]>.left>.icon span {
                         margin-right: -30px;
-                    }`)
-                    sheet.insertRule(`
-                    #harem_left div.girls_list.grid_view div[girl].opened>.right>.g_infos>.lvl {
+                    }
+                    #harem_whole #harem_left div.girls_list.grid_view div[girl].opened>.right>.g_infos>.lvl {
                         top: -3px!important;
                     }`)
-                } else if (currentPage.includes('girl')) {/*
+                } else if (currentPage.includes('girl')) {
+                    /* TODO add this to HH++ BDSM
                     $('.total-from-items span').each(function () {
                         $(this).text(parseInt($(this).text()).toLocaleString())
                     })
@@ -2587,20 +2503,14 @@
                         slot_observer.observe($inventory[0], {childList: true})
                     })
 
-                    sheet.insertRule(`
-                    div#tabs-switcher {
-                        padding: 0.25rem;
-                    }`)
-                    sheet.insertRule(`
-                    .girl-leveler-panel .girl-leveler-container .switch-tab-content .total-from-items {
+                    sheet.insertRules(`
+                    [page="girl"] .girl-leveler-panel .girl-leveler-container .switch-tab-content .total-from-items {
                         margin-top: 0.5rem;
-                    }`)
-                    sheet.insertRule(`
-                    .girl-leveler-panel .girl-leveler-container .switch-tab-content .total-from-items p {
+                    }
+                    [page="girl"] .girl-leveler-panel .girl-leveler-container .switch-tab-content .total-from-items p {
                         margin-top: 0.25rem;
                         margin-bottom: 0.25rem;
-                    }`)
-                    sheet.insertRule(`
+                    }
                     #experience .inventory, #affection .inventory {
                         grid-auto-flow: column;
                         grid-template-rows: auto auto auto auto;
@@ -2801,16 +2711,14 @@
                         }
                     }
 
-                    sheet.insertRule(`
+                    sheet.insertRules(`
                     .opponent_rewards .gridWrapper {
                         grid-template-columns: 1fr 1fr 1fr!important;
-                    }`)
-                    sheet.insertRule(`
+                    }
                     .opponent_rewards .copy>img {
                         width: 20px;
                         height: 28px;
-                    }`)
-                    sheet.insertRule(`
+                    }
                     .opponent_rewards .reset>img {
                         width: 28px;
                         height: 28px;
@@ -2998,14 +2906,13 @@
                             $overlayBG.removeClass('visible')
                         })
 
-                        sheet.insertRule(`
+                        sheet.insertRules(`
                         .champ-log-btn {
                            position: absolute;
                            right: 2rem;
                            width: 35px;
                            height: 35px;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .champ-log-overlay-bg {
                             display: none;
                             width: 100%;
@@ -3013,8 +2920,7 @@
                             position: absolute;
                             top: -5%;
                             z-index: 50;
-                        }`);
-                        sheet.insertRule(`
+                        }
                         .champ-log-panel {
                             display: none;
                             background-color: #080808f5;
@@ -3035,67 +2941,58 @@
                             grid-template-columns: auto;
                             max-height: 470px;
                             overflow-y: auto;
-                        }`)
-                        sheet.insertRule(`
+                        }
+
                         .champ-log-overlay-bg.visible {
                             display: block;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .champ-log-panel.visible {
                             display: grid;
-                        }`)
-                        sheet.insertRule(`
+                        }
+
                         .champ-log-panel h1 {
                             text-align: center;
                             font-size: 1.4em;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .summary-header img {
                             width: 2rem;
                             height: 2rem;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .champ-summary .sample-count {
                             width: 2.5rem;
                             background-position: center;
                             text-align: center;
                             text-shadow: 2px 2px 2px black;
                             padding-top: 10px;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .summary-body {
                             display: grid;
                             grid-template-columns: 2rem repeat(7, 1fr);
                             column-gap: 0.5rem;
                             text-align: center;
                             align-items: center;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .summary-body ul {
                             margin: 0px;
                             padding: 0px;
                             list-style: none;
                             font-size: 14px;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .summary-body li {
                             display: grid;
                             height: 2rem;
                             align-items: center;
                             font-size: 12px;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .summary-body li.two_data {
                             display: grid;
                             grid-template-columns: 1fr 1fr;
                             column-gap: 0.25rem;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .summary-body ul img {
                             width: 2rem;
                             height: 2rem;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .summary-body li.column_header {
                             display: grid;
                             grid-auto-rows: auto;
@@ -3103,8 +3000,7 @@
                             justify-content: center;
                             justify-items: center;
                             font-size: 14px;
-                        }`)
-                        sheet.insertRule(`
+                        }
                         .summary-body ul.total_column {
                             border-right: 4px solid;
                             border-color: rgba(204, 204, 204, 0.26);
@@ -3180,7 +3076,7 @@
                 }
             })
 
-            sheet.insertRule(`
+            sheet.insertRules(`
             .copy-data {
                 width: 26px;
                 height: 26px;
@@ -3188,8 +3084,7 @@
                 margin-left: 10px;
                 cursor: pointer;
                 background-image: url(https://${cdnHost}/design/ic_books_gray.svg);
-            }`)
-            sheet.insertRule(`
+            }
             .copy-time {
                 cursor: pointer;
             }`)
@@ -3360,18 +3255,26 @@
     ]
 
     setTimeout(() => {
-        const {hhPlusPlusConfig} = window
+        if (window.HHPlusPlus) {
+            const runScript = () => {
+                const {hhPlusPlusConfig} = window
 
-        if (hhPlusPlusConfig) {
-            hhPlusPlusConfig.registerGroup({
-                key: 'zoo',
-                name: 'Zoo\'s Scripts'
-            })
-            allModules.forEach(module => {
-                hhPlusPlusConfig.registerModule(module)
-            })
-            hhPlusPlusConfig.loadConfig()
-            hhPlusPlusConfig.runModules()
+                hhPlusPlusConfig.registerGroup({
+                    key: 'zoo',
+                    name: 'Zoo\'s Scripts'
+                })
+                allModules.forEach(module => {
+                    hhPlusPlusConfig.registerModule(module)
+                })
+                hhPlusPlusConfig.loadConfig()
+                hhPlusPlusConfig.runModules()
+            }
+
+            if (window.hhPlusPlusConfig) {
+                runScript()
+            } else {
+                $(document).on('hh++-bdsm:loaded', runScript)
+            }
         } else if (!(['/integrations/', '/index.php'].some(path => path === location.pathname) && location.hostname.includes('nutaku'))) {
             console.log('WARNING: HH++ BDSM not found. Ending the script here')
         }
