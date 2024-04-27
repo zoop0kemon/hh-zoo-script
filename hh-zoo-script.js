@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.5
+// @version         0.9.6
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.6: Adding role tracking to Girl Data Record
 // 0.9.5: Fixing style issues from bundler change
 // 0.9.4: Fixing script for revert to game bundler change
 // 0.9.3: Updating script for game bundler change
@@ -463,6 +464,7 @@
                 rarity: 'Rarity',
                 stars: 'Max Stars',
                 trait: 'Trait',
+                role: 'Role',
                 pose: 'Favorite Position',
                 hair: 'Hair Color',
                 eyes: 'Eye Color',
@@ -505,7 +507,7 @@
         }
 
         updateGirlData (girl) {
-            const {id_girl, name, element, class: girl_class, rarity, nb_grades: stars, figure: pose, hair_color1, hair_color2, eye_color1, eye_color2, zodiac, id_girl_ref: ref_id, carac1, carac2, carac3, salaries, reference, blessed_attributes} = girl
+            const {id_girl, name, element, class: girl_class, rarity, nb_grades: stars, id_role: role, figure: pose, hair_color1, hair_color2, eye_color1, eye_color2, zodiac, id_girl_ref: ref_id, carac1, carac2, carac3, salaries, reference, blessed_attributes} = girl
             const {full_name, anniversary, location, career, hobby_food, hobby_hobby, hobby_fetish, desc} = reference || {}
 
             const girl_data = {
@@ -514,6 +516,7 @@
                 class: girl_class,
                 rarity: capFirst(rarity),
                 stars,
+                role,
                 pose,
                 ref_id,
                 salaries,
@@ -549,7 +552,7 @@
                         // remove undfined/null values to merge
                         delete girl_data[key]
                     } else if (old_value != new_value) {
-                        if (old_value) {
+                        if (old_value || key === 'role') {
                             const date = Date.now()
                             this.dataChanges.push({
                                 id: id_girl,
@@ -625,7 +628,7 @@
         formatGirlData (girl_id, new_girl_data=null, new_ref_data=null) {
             const {GT} = window
             const girl = new_girl_data || this.girlData[girl_id]
-            const {ref_id, class: girl_class, element, pose, stars} = girl
+            const {ref_id, class: girl_class, element, pose, stars, role} = girl
             const ref_data = new_ref_data || this.girlRefData[ref_id]
             const {hair, eyes, birthday} = ref_data || {}
             const girl_data = Object.assign({}, girl, ref_data, {style: GT.design[`girl_style_${element}_${girl_class}`], trait: stars < 3 ? 'None' : this.trait_map[element]})
@@ -633,6 +636,9 @@
             girl_data.element = GT.design[`${element}_flavor_element`]
             girl_data.class = GT.caracs[girl_class]
             girl_data.pose = GT.figures[pose] === 'Doggie style' ? 'Doggie Style' : GT.figures[pose]
+            if (role) {
+                girl_data.role = GT.design[`girl_role_${role}_name`]
+            }
             girl_data.hair = hair?.split(',').map(color => GT.colors[color]).join(' and ')
             girl_data.eyes = eyes?.split(',').map(color => GT.colors[color]).join(' and ')
             if (birthday) {
@@ -653,7 +659,7 @@
 
         printGirlData (girl_id) {
             const girl_data = this.formatGirlData(girl_id)
-            const {ref_id, name, full_name, element, class: girl_class, rarity, stars, trait, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style, desc, salaries, hc, ch, kh} = girl_data
+            const {ref_id, name, full_name, element, class: girl_class, rarity, stars, trait, role, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style, desc, salaries, hc, ch, kh} = girl_data
             const salary_info = salaries?.split('|').map((income) => {
                 const income_info = income.split(',').map(n => parseInt(n))
                 const pay = income_info[0].toLocaleString('en')
@@ -663,7 +669,7 @@
             }) || []
 
             if (!this.wiki) {
-                const data_list = [name, girl_id, full_name, element, girl_class, rarity, stars, trait, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style]
+                const data_list = [name, girl_id, full_name, element, girl_class, rarity, stars, trait, role, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style]
                 if (this.cxh) {
                     data_list.push(desc)
                 }
@@ -1799,9 +1805,9 @@
             })
 
             const reward_keys = this.reward_keys
-            function copyLog(pachinko, pachinko_log, time_start, time_end) {
+            const copyLog = async (pachinko, pachinko_log, time_start, time_end) => {
                 const type = pachinko.match(/\D+/)[0]
-                const girlDict = HHPlusPlus.Helpers.getGirlDictionary()
+                const girlDict = await HHPlusPlus.Helpers.getGirlDictionary()
                 let log = ''
 
                 pachinko_log.forEach((roll) => {
@@ -2283,27 +2289,25 @@
                     console.log("Zoo's Scripts (Compact Market) WARNING: Disable this or Style Tweaks' \"Expanded Market inventory\" module")
                 }
 
-                const fill_slots_market = () => {
-                    $('.player-inventory-content, .my-inventory-container .booster').each(function () {
-                        const slots= $(this).find('.slot-container').length
-                        const slots_empty = $(this).find('.slot-container.empty').length
-                        const slots_filled = slots - slots_empty
-                        const empty_pad = Math.max(16, Math.ceil(slots_filled/4)*4) - slots_filled
+                const fill_slots_market = (el) => {
+                    const slots = $(el).find('.slot-container').length
+                    const slots_empty = $(el).find('.slot-container.empty').length
+                    const slots_filled = slots - slots_empty
+                    const empty_pad = Math.max(16, Math.ceil(slots_filled/4)*4) - slots_filled
 
-                        if (empty_pad != slots_empty) {
-                            $(this).find('.slot-container.empty').remove()
-                            $(this).append('<div class="slot-container empty"><div class="slot empty"></div></div>'.repeat(empty_pad))
-                        }
-                    })
+                    if (slots && empty_pad != slots_empty) {
+                        $(el).find('.slot-container.empty').remove()
+                        $(el).append('<div class="slot-container empty"><div class="slot empty"></div></div>'.repeat(empty_pad))
+                    }
                 }
 
-                fill_slots_market()
-                const observer = new MutationObserver(() => {
-                    fill_slots_market()
+                $('.player-inventory-content, .my-inventory-container .booster').each((i, el) => {
+                    const observer = new MutationObserver(() => {
+                        fill_slots_market(el)
+                    })
+                    fill_slots_market(el)
+                    observer.observe($(el)[0], {childList: true})
                 })
-                observer.observe($('.player-inventory-content')[0], {childList: true})
-                observer.observe($('.player-inventory-content')[1], {childList: true})
-                observer.observe($('.my-inventory-container .booster')[0], {childList: true})
 
                 sheet.insertRules(`
                 .right-container .player-inventory-content {
