@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.6
+// @version         0.9.7
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.7: Updating harem page url
 // 0.9.6: Adding role tracking to Girl Data Record
 // 0.9.5: Fixing style issues from bundler change
 // 0.9.4: Fixing script for revert to game bundler change
@@ -496,7 +497,7 @@
         }
 
         shouldRun () {
-            return currentPage.includes('edit-team') || currentPage.includes('waifu.html') || currentPage.includes('activities') || (currentPage.includes('harem') && !currentPage.includes('hero'))
+            return currentPage.includes('edit-team') || currentPage.includes('waifu.html') || currentPage.includes('activities') || ((currentPage.includes('characters') || currentPage.includes('harem')) && !currentPage.includes('hero'))
         }
 
         cleanData (string) {
@@ -900,12 +901,12 @@
                     })
                 }
                 if (currentPage.includes('waifu.html')) {
-                    const {girlsDataList} = window
-                    Object.values(girlsDataList).forEach((girl) => {
+                    const {girls_data_list} = window
+                    Object.values(girls_data_list).forEach((girl) => {
                         this.updateGirlData(girl)
                     })
                 }
-                if (currentPage.includes('harem') && !currentPage.includes('hero')) {
+                if ((currentPage.includes('characters') || currentPage.includes('harem')) && !currentPage.includes('hero')) {
                     const checked_girls = []
 
                     HHPlusPlus.Helpers.onAjaxResponse(/action=get_girls_list/i, ({girls_list}) => {
@@ -2464,14 +2465,14 @@
         }
 
         shouldRun () {
-            return currentPage.includes('harem') && !currentPage.includes('hero') || currentPage.includes('/girl/')
+            return (currentPage.includes('characters') || currentPage.includes('harem')) && !currentPage.includes('hero') || currentPage.includes('/girl/')
         }
 
         run () {
             if (this.hasRun || !this.shouldRun()) {return}
 
             $(document).ready(() => {
-                if (currentPage.includes('harem') && !currentPage.includes('hero')) {
+                if ((currentPage.includes('characters') || currentPage.includes('harem')) && !currentPage.includes('hero')) {
                     sheet.insertRules(`
                     #harem_whole #harem_left div.girls_list.grid_view div[girl]>.left>.icon span {
                         margin-right: -30px;
@@ -2480,18 +2481,6 @@
                         top: -3px!important;
                     }`)
                 } else if (currentPage.includes('girl')) {
-                    /* TODO add this to HH++ BDSM
-                    $('.total-from-items span').each(function () {
-                        $(this).text(parseInt($(this).text()).toLocaleString())
-                    })
-                    const total_observer = new MutationObserver(() => {
-                        $('.total-from-items span').each(function () {
-                            $(this).text(parseInt($(this).text()).toLocaleString())
-                        })
-                    })
-                    total_observer.observe($('.total-from-items')[0], {subtree: true, characterData: true})*/
-
-
                     ['experience', 'affection'].forEach((resource) => {
                         const $inventory = $(`#${resource} .inventory`)
 
@@ -2522,6 +2511,11 @@
                         gap: 0.25rem 1rem;
                         padding-top: 0.5rem;
                         justify-content: start;
+                    }
+                    #equipment .inventory {
+                        height: 21.5rem;
+                        gap: 0.25rem 1rem;
+                        padding-top: 0.5rem;
                     }`)
                 }
             })
