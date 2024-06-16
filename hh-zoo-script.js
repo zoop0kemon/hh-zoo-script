@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.7
+// @version         0.9.8
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.8: Fixing tracking of girl base stats (now only trackable in the harem page)
 // 0.9.7: Updating harem page url
 // 0.9.6: Adding role tracking to Girl Data Record
 // 0.9.5: Fixing style issues from bundler change
@@ -508,7 +509,7 @@
         }
 
         updateGirlData (girl) {
-            const {id_girl, name, element, class: girl_class, rarity, nb_grades: stars, id_role: role, figure: pose, hair_color1, hair_color2, eye_color1, eye_color2, zodiac, id_girl_ref: ref_id, carac1, carac2, carac3, salaries, reference, blessed_attributes} = girl
+            const {id_girl, name, element, class: girl_class, rarity, nb_grades: stars, id_role: role, figure: pose, hair_color1, hair_color2, eye_color1, eye_color2, zodiac, id_girl_ref: ref_id, carac1, carac2, carac3, salaries, reference, caracs} = girl
             const {full_name, anniversary, location, career, hobby_food, hobby_hobby, hobby_fetish, desc} = reference || {}
 
             const girl_data = {
@@ -521,9 +522,9 @@
                 pose,
                 ref_id,
                 salaries,
-                hc: blessed_attributes ? null : carac1,
-                ch: blessed_attributes ? null : carac2,
-                kh: blessed_attributes ? null : carac3
+                hc: caracs ? null : carac1,
+                ch: caracs ? null : carac2,
+                kh: caracs ? null : carac3
             }
             const ref_data = {
                 full_name: this.cleanData(full_name),
@@ -1154,7 +1155,8 @@
                     leagueData.banned = [...new Set(banned)]
                 }
 
-                opponents_list.forEach(({country_text, player, player_league_points}) => {
+                const places = {}
+                opponents_list.forEach(({country_text, player, player_league_points, place}) => {
                     let flag = country_text
                     const translation = flag_fr.indexOf(flag)
                     if (translation > -1) {
@@ -1168,8 +1170,9 @@
                         flag: flag,
                         points: player_league_points
                     })
+                    places[player.id_fighter] = parseInt(place)
                 })
-                leagueData.playerList.sort((a, b) => (parseInt(b.points) < parseInt(a.points)) ? -1 : 1)
+                leagueData.playerList.sort((a, b) => places[a.id] - places[b.id])
 
                 lsSet('LeagueRecord', leagueData)
             }
