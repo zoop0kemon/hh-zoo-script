@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.8
+// @version         0.9.9
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.9: Removing tracking of girl salary info from Girl Data Record
 // 0.9.8: Fixing tracking of girl base stats (now only trackable in the harem page)
 // 0.9.7: Updating harem page url
 // 0.9.6: Adding role tracking to Girl Data Record
@@ -480,7 +481,6 @@
                 style: 'Style',
                 desc: 'Description',
                 ref_id: 'Ref ID',
-                salaries: 'Salary Info',
                 hc: 'Base HC',
                 ch: 'Base CH',
                 kh: 'Base KH',
@@ -509,7 +509,7 @@
         }
 
         updateGirlData (girl) {
-            const {id_girl, name, element, class: girl_class, rarity, nb_grades: stars, id_role: role, figure: pose, hair_color1, hair_color2, eye_color1, eye_color2, zodiac, id_girl_ref: ref_id, carac1, carac2, carac3, salaries, reference, caracs} = girl
+            const {id_girl, name, element, class: girl_class, rarity, nb_grades: stars, id_role: role, figure: pose, hair_color1, hair_color2, eye_color1, eye_color2, zodiac, id_girl_ref: ref_id, carac1, carac2, carac3, reference, caracs} = girl
             const {full_name, anniversary, location, career, hobby_food, hobby_hobby, hobby_fetish, desc} = reference || {}
 
             const girl_data = {
@@ -521,7 +521,6 @@
                 role,
                 pose,
                 ref_id,
-                salaries,
                 hc: caracs ? null : carac1,
                 ch: caracs ? null : carac2,
                 kh: caracs ? null : carac3
@@ -661,14 +660,16 @@
 
         printGirlData (girl_id) {
             const girl_data = this.formatGirlData(girl_id)
-            const {ref_id, name, full_name, element, class: girl_class, rarity, stars, trait, role, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style, desc, salaries, hc, ch, kh} = girl_data
-            const salary_info = salaries?.split('|').map((income) => {
-                const income_info = income.split(',').map(n => parseInt(n))
-                const pay = income_info[0].toLocaleString('en')
-                const time = income_info[1].toLocaleString('en')
-                const rate = Math.ceil(income_info[0] / (income_info[1] / 60)).toLocaleString('en')
+            const {ref_id, name, full_name, element, class: girl_class, rarity, stars, trait, role, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style, desc, hc, ch, kh} = girl_data
+            const SALARY_TIMES = [30, 90, 270, 420, 420, 420, 420]
+            const salary_info = (rarity === 'Starting' ? (!(isPSH || isTPSH || isGPSH) ? [12500, 45000, 157500, 280000, 315000, 350000] : [15625, 56250, 196875, 350000, 393750, 437500]) : 
+                                                         (!(isPSH || isTPSH || isGPSH) ? [400, 1350, 4725, 8890, 11900, 22400, 35000] : [500, 1688, 5906, 11113, 14875, 28000, 43750]))
+            .slice(0, stars+1).map((income, star) => {
+                const pay = income.toLocaleString('en')
+                const time = SALARY_TIMES[star].toLocaleString('en')
+                const rate = Math.ceil(income/(time/60)).toLocaleString('en')
                 return {pay, time, rate}
-            }) || []
+            })
 
             if (!this.wiki) {
                 const data_list = [name, girl_id, full_name, element, girl_class, rarity, stars, trait, role, pose, hair, eyes, zodiac, birthday, location, career, food, hobby, fetish, style]
@@ -677,9 +678,7 @@
                 }
                 data_list.push(ref_id, '')
                 if (this.cxh) {
-                    const incomes = [0, 1, 2, 3, 4, 5, 6].map(star => star>stars ? '' : (salary_info[star]?.pay || ''))
-                    const rates = [0, 1, 2, 3, 4, 5, 6].map(star => star>stars ? '' : (salary_info[star]?.time || ''))
-                    data_list.push('', ...incomes, ...rates)
+                    data_list.push('')
                 }
                 data_list.push(...[hc, ch, kh].map(stat => (stat/10).toFixed(1)))
                 data_list.forEach((info, i) => {
