@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.9
+// @version         0.9.10
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.10: Adding support for prestige gem bonus and lively scene drops for Villain Drops Recorder
 // 0.9.9: Removing tracking of girl salary info from Girl Data Record
 // 0.9.8: Fixing tracking of girl base stats (now only trackable in the harem page)
 // 0.9.7: Updating harem page url
@@ -2563,7 +2564,7 @@
                     if ('rewards' in response.rewards.data) {
                         response.rewards.data.rewards.forEach((reward) => {
                             const type = reward.type
-                            let temp_count = reward.value
+                            let temp_count = type != 'lively_scene' ? reward.value : 1
                             if (typeof temp_count === 'string') {
                                 temp_count = temp_count.replace(/,/g, '')
                             }
@@ -2577,7 +2578,7 @@
                             } else if (type == 'gems') {
                                 const gem_count = id_opponent < 5 ? 15 : id_opponent < 13 ? 20 : 25
                                 const gem_type = reward.gem_type? reward.gem_type : reward.value.match(/(?<=gems\/).*?(?=\.png)/g)[0]
-                                if (isMulti) {drop_count = count/gem_count}
+                                if (isMulti) {drop_count = Math.floor(count/gem_count)}
                                 reward_key = `G${gem_count == 15 ? first_gems.includes(gem_type) ? 1 : 2 : ''}`
                             } else if (type == 'soft_currency') {
                                 if (isMulti) {
@@ -2603,6 +2604,8 @@
                                 } else {
                                     console.log(reward)
                                 }
+                            } else if (type == 'lively_scene') {
+                                reward_key = 'LS'
                             } else {
                                 console.log(count)
                                 console.log(reward)
