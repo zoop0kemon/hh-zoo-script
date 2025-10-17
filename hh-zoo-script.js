@@ -1791,6 +1791,7 @@
             const $button = $('<div class="blue_circular_btn pachinko-log-btn"><span class="info_icn"></span></div>')
             const $panel = $(`<div class="pachinko-log-panel hh-scroll">${this.buildSummaries()}</div>`)
             const $overlayBG = $('<div class="pachinko-log-overlay-bg"></div>')
+            $('#playzone-replace-info').children().filter(".blue_circular_btn.pachinko-log-btn , .pachinko-log-panel.hh-scroll, .pachinko-log-overlay-bg").remove()
             $('#playzone-replace-info').append($button).append($panel).append($overlayBG)
 
             $button.click(() => {
