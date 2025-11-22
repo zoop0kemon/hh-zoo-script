@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Zoo's HH Scripts
 // @description     Some data recording scripts and style tweaks by zoopokemon
-// @version         0.9.10
+// @version         0.9.11
 // @match           https://*.hentaiheroes.com/*
 // @match           https://nutaku.haremheroes.com/*
 // @match           https://*.gayharem.com/*
@@ -20,6 +20,7 @@
 /*  ===========
      CHANGELOG
     =========== */
+// 0.9.11: Adding support for PA world and extra villain drops for Villain Drops Recorder
 // 0.9.10: Adding support for prestige gem bonus and lively scene drops for Villain Drops Recorder
 // 0.9.9: Removing tracking of girl salary info from Girl Data Record
 // 0.9.8: Fixing tracking of girl base stats (now only trackable in the harem page)
@@ -159,7 +160,7 @@
             },
             boosters: {
                 B1: 'Ginseng Root',
-                B2: 'Jujbues',
+                B2: 'Jujubes',
                 B3: 'Chlorella',
                 B4: 'Cordyceps'
             }
@@ -184,7 +185,7 @@
             },
             boosters: {
                 B1: 'Ginseng Root',
-                B2: 'Jujbues',
+                B2: 'Jujubes',
                 B3: 'Chlorella',
                 B4: 'Cordyceps'
             }
@@ -1791,6 +1792,7 @@
             const $button = $('<div class="blue_circular_btn pachinko-log-btn"><span class="info_icn"></span></div>')
             const $panel = $(`<div class="pachinko-log-panel hh-scroll">${this.buildSummaries()}</div>`)
             const $overlayBG = $('<div class="pachinko-log-overlay-bg"></div>')
+             $('#playzone-replace-info').children().filter(".blue_circular_btn.pachinko-log-btn , .pachinko-log-panel.hh-scroll, .pachinko-log-overlay-bg").remove()
             $('#playzone-replace-info').append($button).append($panel).append($overlayBG)
 
             $button.click(() => {
@@ -2574,11 +2576,14 @@
 
                             if (type == 'item') {
                                 const item = reward.value.item
-                                reward_key = `${item.identifier}${item.rarity[0].toUpperCase()}`
+                                const rarity_key = item.type === 'booster' && item.rarity === 'mythic' ? '' : item.rarity[0].toUpperCase()
+                                reward_key = `${item.identifier}${rarity_key}`
                             } else if (type == 'gems') {
-                                const gem_count = id_opponent < 5 ? 15 : id_opponent < 13 ? 20 : 25
+                                const gem_count = ((id_opponent < 5) || (id_opponent == 20)) ? 15 : id_opponent < 13 ? 20 : 25
                                 const gem_type = reward.gem_type? reward.gem_type : reward.value.match(/(?<=gems\/).*?(?=\.png)/g)[0]
-                                if (isMulti) {drop_count = Math.floor(count/gem_count)}
+                                if (isMulti) {
+                                    drop_count = Math.floor(count/gem_count)
+                                }
                                 reward_key = `G${gem_count == 15 ? first_gems.includes(gem_type) ? 1 : 2 : ''}`
                             } else if (type == 'soft_currency') {
                                 if (isMulti) {
@@ -2591,24 +2596,30 @@
                                 }
                                 reward_key = 'Y'
                             } else if (type == 'orbs') {
-                                if (reward.orbs_type? reward.orbs_type == 'o_m1' : reward.value.includes('o_m1')) {
-                                    reward_key = 'M'
-                                } else {
-                                    reward_key = 'O'
-                                }
+                                reward_key = reward.orbs_type.split('_')[1].toUpperCase()
                             } else if (type == 'ticket') {
                                 reward_key = 'T'
                             } else if (type == 'progressions') {
                                 if (reward.progression_type? reward.progression_type=="progression_sm" : reward.value.includes('type_progression_sm')) {
                                     reward_key = 'K'
                                 } else {
+                                    console.log('Uknown progression reward:')
                                     console.log(reward)
                                 }
                             } else if (type == 'lively_scene') {
-                                reward_key = 'LS'
+                                reward_key = 'V'
+                            } else if (type.startsWith('scrolls_')) {
+                                reward_key = `B${type.split('_')[1][0].toUpperCase()}`
+                            } else if (type == 'energy_kiss') {
+                                reward_key = 'KS'
+                            } else if (type == 'energy_quest') {
+                                reward_key = 'E'
+                                if (isMulti) {
+                                    drop_count = Math.round(count/5)
+                                }
                             } else {
-                                console.log(count)
-                                console.log(reward)
+                                console.log('Uknown reward:')
+                                console.log(count, reward)
                             }
 
                             rewards_left -= drop_count
@@ -2913,8 +2924,7 @@
                         .champ-log-btn {
                            position: absolute;
                            right: 2rem;
-                           width: 35px;
-                           height: 35px;
+                           top: 1rem;
                         }
                         .champ-log-overlay-bg {
                             display: none;
